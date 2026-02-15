@@ -26,10 +26,44 @@
         this.isMoving = false;
         this.remainingStep = 0;
         this.currentDir = 'down';
+
+        this.hp = 6;
+        this.invincibleTimer = 0;
+        this.isKnockedBack = false;
+        this.knockbackDist = 0;
       }
 
       // Semantic behavior: Take 8px steps
       process(inputDir, room) {
+        if (this.invincibleTimer > 0) this.invincibleTimer--;
+
+        if (this.isKnockedBack) {
+          const speed = 4;
+          let dx = 0, dy = 0;
+          // Move opposite to facing direction
+          if (this.currentDir === 'left') dx = speed;
+          if (this.currentDir === 'right') dx = -speed;
+          if (this.currentDir === 'up') dy = speed;
+          if (this.currentDir === 'down') dy = -speed;
+
+          const nextX = this.x + dx;
+          const nextY = this.y + dy;
+
+          if (this.canPass(nextX, nextY, room)) {
+            this.x = nextX;
+            this.y = nextY;
+          }
+
+          this.knockbackDist -= speed;
+          if (this.knockbackDist <= 0) {
+            this.isKnockedBack = false;
+            // Snap to grid
+            this.x = Math.round(this.x / this.gridSize) * this.gridSize;
+            this.y = Math.round(this.y / this.gridSize) * this.gridSize;
+          }
+          return;
+        }
+
         // If we are mid-step, keep moving until the 8px is exhausted
         if (this.isMoving) {
           let dx = 0, dy = 0;
@@ -98,6 +132,70 @@
 
         return false;
       }
+
+      takeDamage(amount, srcX, srcY) {
+        if (this.invincibleTimer > 0) return false;
+        this.hp -= amount;
+        this.invincibleTimer = 30;
+        this.knockback(srcX, srcY);
+        return this.hp <= 0;
+      }
+
+      knockback(srcX, srcY) {
+        this.isKnockedBack = true;
+        this.knockbackDist = 32;
+        this.isMoving = false;
+        this.remainingStep = 0;
+
+        const dx = srcX - this.x;
+        const dy = srcY - this.y;
+        if (Math.abs(dx) > Math.abs(dy)) this.currentDir = dx > 0 ? 'right' : 'left';
+        else this.currentDir = dy > 0 ? 'down' : 'up';
+      }
+    }
+
+    class MonsterModel extends ActorModel {
+      constructor(x, y, type) {
+        super(x, y);
+        this.type = type;
+        this.hp = 3;
+        this.aiTimer = 0;
+        this.speed = 1; // Monsters are typically slower than the player
+      }
+
+      ai(room) {
+        if (this.isKnockedBack) {
+          this.process(null, room);
+          return;
+        }
+
+        // If currently moving, continue that movement
+        if (this.isMoving) {
+          this.process(null, room);
+          return;
+        }
+
+        // If waiting, count down
+        if (this.aiTimer > 0) {
+          this.aiTimer--;
+          return;
+        }
+
+        // Pick a random direction
+        const dirs = ['up', 'down', 'left', 'right'];
+        const pick = dirs[Math.floor(Math.random() * dirs.length)];
+        this.process(pick, room);
+
+        // Set a pause timer
+        if (!this.isMoving) this.aiTimer = 30 + Math.floor(Math.random() * 30);
+      }
+    }
+
+    class MoblinModel extends MonsterModel {
+      constructor(x, y) {
+        super(x, y, 'moblin');
+        this.speed = 0.25;
+      }
     }
 
     class RoomModel {
@@ -107,47 +205,6 @@
         this.wallTypes = { n: 'open', s: 'solid', e: 'solid', w: 'solid' };
       }
     }
-
-    /** --- THE VIEW (Phaser) --- **/
-    //class DungeonScene extends Phaser.Scene {
-    //    create() {
-    //        this.roomModel = { cornerSize: 32, floorSize: 192, wallTypes: { n: 'open', s: 'solid', e: 'solid', w: 'solid' } };
-    //        this.playerModel = new ActorModel(128, 128);
-    //        
-    //        // Render 9-patch room
-    //        this.renderRoom();
-    //        this.playerView = this.add.rectangle(0, 0, 16, 16, 0xff0000);
-    //        this.cursors = this.input.keyboard.createCursorKeys();
-    //    }
-    //
-    //    renderRoom() {
-    //        const { cornerSize: cs, floorSize: fs } = this.roomModel;
-    //        this.add.rectangle(cs, cs, fs, fs, 0x333333).setOrigin(0); // Floor
-    //        // Corners
-    //        const c = 0x111111;
-    //        this.add.rectangle(0, 0, cs, cs, c).setOrigin(0);
-    //        this.add.rectangle(cs+fs, 0, cs, cs, c).setOrigin(0);
-    //        this.add.rectangle(0, cs+fs, cs, cs, c).setOrigin(0);
-    //        this.add.rectangle(cs+fs, cs+fs, cs, cs, c).setOrigin(0);
-    //        // Walls
-    //        const w = 0x222222;
-    //        this.add.rectangle(cs, 0, fs, cs, this.roomModel.wallTypes.n === 'open' ? 0x0000ff : w).setOrigin(0);
-    //        this.add.rectangle(cs, cs+fs, fs, cs, w).setOrigin(0);
-    //        this.add.rectangle(0, cs, cs, fs, w).setOrigin(0);
-    //        this.add.rectangle(cs+fs, cs, cs, fs, w).setOrigin(0);
-    //    }
-    //
-    //    update() {
-    //        let inputDir = null;
-    //        if (this.cursors.left.isDown) inputDir = 'left';
-    //        else if (this.cursors.right.isDown) inputDir = 'right';
-    //        else if (this.cursors.up.isDown) inputDir = 'up';
-    //        else if (this.cursors.down.isDown) inputDir = 'down';
-    //
-    //        this.playerModel.process(inputDir, this.roomModel);
-    //        this.playerView.setPosition(this.playerModel.x, this.playerModel.y);
-    //    }
-    //}
 
     const SKIN_CONFIG = {
       startPos: { x: 256, y: 0 },
@@ -203,6 +260,30 @@
         this.playerModel = new ActorModel(128, 128);
         this.cursors = this.input.keyboard.createCursorKeys();
         this.loadDoors();
+
+        // 1. Create the Room Base
+        // We use a "Frame" to grab just the 256x256 room from the giant sheet
+        // Define frame: .add(name, sourceIndex, x, y, width, height)
+        this.textures.get('master_sheet').add('room_bg', 0, 0, 64, 256, 256);
+        this.add.image(0, 0, 'master_sheet', 'room_bg').setOrigin(0);
+
+        // 1.5 Draw doors based on the RoomModel
+        const doorPositions = {
+          n: { x: 112, y: 0 },
+          s: { x: 112, y: 224 },
+          w: { x: 0, y: 112 },
+          e: { x: 224, y: 112 }
+        };
+        for (const [wall, type] of Object.entries(this.roomModel.wallTypes)) {
+          const pos = doorPositions[wall];
+          const textureName = `door_${wall}_${type}`;
+          this.add.image(pos.x, pos.y, 'master_sheet', textureName).setOrigin(0);
+        }
+
+        this.loadEnemies();
+        this.enemies = [];
+        this.createEnemyAnims();
+        this.spawnEnemy(192, 128, 'moblin');
         this.currentWeapon = 'Rapier';
         this.isAttacking = false;
 
@@ -225,25 +306,6 @@
         this.input.keyboard.on('keydown-SPACE', () => {
           this.performAttack();
         });
-
-        // 1. Create the Room Base
-        // We use a "Frame" to grab just the 256x256 room from the giant sheet
-        // Define frame: .add(name, sourceIndex, x, y, width, height)
-        this.textures.get('master_sheet').add('room_bg', 0, 0, 64, 256, 256);
-        this.add.image(0, 0, 'master_sheet', 'room_bg').setOrigin(0);
-
-        // 1.5 Draw doors based on the RoomModel
-        const doorPositions = {
-          n: { x: 112, y: 0 },
-          s: { x: 112, y: 224 },
-          w: { x: 0, y: 112 },
-          e: { x: 224, y: 112 }
-        };
-        for (const [wall, type] of Object.entries(this.roomModel.wallTypes)) {
-          const pos = doorPositions[wall];
-          const textureName = `door_${wall}_${type}`;
-          this.add.image(pos.x, pos.y, 'master_sheet', textureName).setOrigin(0);
-        }
 
         // 2. Define the Player Animation
         this.loadSkin('Link');
@@ -321,6 +383,94 @@
         });
       }
 
+      loadEnemies() {
+        const sheet = this.textures.get('master_sheet');
+
+        // Gleeok
+        for (let i = 0; i < 3; i++) {
+          sheet.add(`gleeok_body_${i}`, 0, i * 32, 320, 32, 32);
+        }
+        sheet.add('gleeok_neck', 0, 96, 320, 16, 16);
+        sheet.add('gleeok_head', 0, 96, 336, 16, 16);
+
+        // Gohma
+        sheet.add('gohma_legs_left_0', 0, 0, 352, 16, 16);
+        sheet.add('gohma_legs_left_1', 0, 16, 352, 16, 16);
+        sheet.add('gohma_legs_right_0', 0, 32, 352, 16, 16);
+        sheet.add('gohma_legs_right_1', 0, 48, 352, 16, 16);
+
+        // Manhandla
+        sheet.add('manhandla_mouth_left_0', 0, 64, 352, 16, 16);
+        sheet.add('manhandla_mouth_left_1', 0, 80, 352, 16, 16);
+        sheet.add('manhandla_mouth_top_0', 0, 96, 352, 16, 16);
+        sheet.add('manhandla_mouth_top_1', 0, 112, 352, 16, 16);
+        sheet.add('manhandla_mouth_right_0', 0, 64, 368, 16, 16);
+        sheet.add('manhandla_mouth_right_1', 0, 80, 368, 16, 16);
+        sheet.add('manhandla_mouth_bottom_0', 0, 96, 368, 16, 16);
+        sheet.add('manhandla_mouth_bottom_1', 0, 112, 368, 16, 16);
+        sheet.add('manhandla_body', 0, 128, 352, 16, 16);
+
+        // Dodongo
+        ['walk0', 'walk1', 'hurt'].forEach((n, i) => {
+          sheet.add(`dodongo_down_${n}`, 0, 144 + i * 16, 320, 16, 16);
+          sheet.add(`dodongo_up_${n}`, 0, 192 + i * 16, 320, 16, 16);
+          sheet.add(`dodongo_left_${n}`, 0, 144 + i * 32, 336, 32, 16);
+          sheet.add(`dodongo_right_${n}`, 0, 144 + i * 32, 352, 32, 16);
+        });
+
+        // Keese, Gel, Zol
+        ['keese', 'gel', 'zol'].forEach((name, idx) => {
+          const startX = 144 + (idx * 32);
+          sheet.add(`${name}_0`, 0, startX, 368, 16, 16);
+          sheet.add(`${name}_1`, 0, startX + 16, 368, 16, 16);
+        });
+
+        // Standard Enemies
+        const loadStandard = (name, sx, sy) => {
+          sheet.add(`${name}_down_0`, 0, sx, sy, 16, 16);
+          sheet.add(`${name}_down_1`, 0, sx + 16, sy, 16, 16);
+          sheet.add(`${name}_up_0`, 0, sx + 32, sy, 16, 16);
+          sheet.add(`${name}_up_1`, 0, sx + 48, sy, 16, 16);
+          sheet.add(`${name}_left_0`, 0, sx, sy + 16, 16, 16);
+          sheet.add(`${name}_left_1`, 0, sx + 16, sy + 16, 16, 16);
+          sheet.add(`${name}_right_0`, 0, sx + 32, sy + 16, 16, 16);
+          sheet.add(`${name}_right_1`, 0, sx + 48, sy + 16, 16, 16);
+        };
+
+        loadStandard('goriya', 0, 384);
+        loadStandard('moblin', 0, 416);
+        loadStandard('darknut', 64, 384);
+        loadStandard('octorok', 128, 384);
+        loadStandard('lynel', 192, 384);
+      }
+
+      createEnemyAnims() {
+        const types = ['moblin', 'goriya', 'darknut', 'octorok', 'lynel'];
+        types.forEach(type => {
+          ['down', 'up', 'left', 'right'].forEach(dir => {
+            this.anims.create({
+              key: `${type}_${dir}`,
+              frames: [
+                { key: 'master_sheet', frame: `${type}_${dir}_0` },
+                { key: 'master_sheet', frame: `${type}_${dir}_1` }
+              ],
+              frameRate: 6,
+              repeat: -1
+            });
+          });
+        });
+      }
+
+      spawnEnemy(x, y, type) {
+        let model;
+        if (type === 'moblin') model = new MoblinModel(x, y);
+        else model = new MonsterModel(x, y, type);
+
+        const sprite = this.add.sprite(x, y, 'master_sheet');
+        sprite.play(`${type}_down`);
+        this.enemies.push({ model, sprite });
+      }
+
       loadDoors() {
         const walls = ['n', 's', 'w', 'e'];
         const types = ['solid', 'open', 'locked', 'shut'];
@@ -354,6 +504,27 @@
           this.isAttacking = false;
           this.weaponView.setVisible(false);
         });
+
+        // Attack Hitbox Check
+        const { x, y, currentDir } = this.playerModel;
+        const reach = 20;
+        let hx = x, hy = y;
+        if (currentDir === 'left') hx -= reach;
+        if (currentDir === 'right') hx += reach;
+        if (currentDir === 'up') hy -= reach;
+        if (currentDir === 'down') hy += reach;
+
+        for (let i = this.enemies.length - 1; i >= 0; i--) {
+          const e = this.enemies[i];
+          if (Math.abs(e.model.x - hx) < 16 && Math.abs(e.model.y - hy) < 16) {
+            e.sprite.setTint(0xff0000);
+            this.time.delayedCall(150, () => { if (e.sprite.scene) e.sprite.clearTint(); });
+            if (e.model.takeDamage(1, this.playerModel.x, this.playerModel.y)) {
+              e.sprite.destroy();
+              this.enemies.splice(i, 1);
+            }
+          }
+        }
       }
 
       updateWeaponPosition() {
@@ -394,6 +565,26 @@
           const firstFrame = this.anims.get(dir).frames[0].frame.name;
           this.playerView.setFrame(firstFrame);
         }
+
+        // Player vs Enemy Collision
+        const px = this.playerModel.x;
+        const py = this.playerModel.y;
+        this.enemies.forEach(e => {
+          if (Math.abs(e.model.x - px) < 12 && Math.abs(e.model.y - py) < 12) {
+            this.playerModel.takeDamage(1, e.model.x, e.model.y);
+          }
+        });
+
+        // Update Enemies
+        this.enemies.forEach(e => {
+          e.model.ai(this.roomModel);
+          e.sprite.setPosition(e.model.x, e.model.y);
+          if (e.model.isMoving) {
+            e.sprite.play(`${e.model.type}_${e.model.currentDir}`, true);
+          } else {
+            e.sprite.stop();
+          }
+        });
       }
     }
 
