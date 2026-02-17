@@ -8,13 +8,28 @@ export enum Direction {
   up = "up", down = "down", left = "left", right = "right"
 }
 
+export enum ActorStateType {
+  WAIT,
+  IDLE,
+  MOVE,
+  ATTACK,
+  SPAWN,
+  KNOCKBACK,
+  DYING,
+  DEAD
+}
+
+export type StateDefinition {
+  [K in ActorStateType]: ActorState
+}
+
 /**
  * Interface for Actor State Pattern.
  */
-export interface IActorState {
+export interface ActorState {
   enter(actor: ActorModel): void;
-  update(actor: ActorModel, room: RoomModel, inputDir: Direction | null): void;
-  getAnimKey(actor: ActorModel): string;
+  update(actor: ActorModel, room: RoomModel): void;
+  exit(actor: ActorModel): void;
 }
 
 /**

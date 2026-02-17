@@ -64,40 +64,45 @@ export abstract class EntityModel {
     return this._x;
   }
 
-  protected set x(value: number) {
-    this._x = value;
-  }
-
   public get y(): number {
     return this._y;
+  }
+  
+  public get type(): EntityType {
+    return this._type;
+  }
+  
+  public get scene(): ISceneWithItemDrops {
+    return this._scene;
+  }
+  
+  public get subtype(): EntitySubtype {
+    return this._subtype;
+  }
+  //#endregion
+  
+  //#region Mutators
+
+  protected set x(value: number) {
+    this._x = value;
   }
 
   protected set y(value: number) {
     this._y = value;
   }
 
-  public get type(): EntityType {
-    return this._type;
-  }
-
   protected set type(value: EntityType) {
     this._type = value;
-  }
-
-  public get scene(): ISceneWithItemDrops {
-    return this._scene;
   }
 
   protected set scene(value: ISceneWithItemDrops) {
     this._scene = value;
   }
 
-  public get subtype(): EntitySubtype {
-    return this._subtype;
-  }
   protected set subtype(value: EntitySubtype) {
     this._subtype = value;
   }
+
   //#endregion
 
   //#region Methods
@@ -107,9 +112,7 @@ export abstract class EntityModel {
    */
   abstract onTouch(other: EntityModel): void;
 
-  abstract getAnimKey(): string;
-
-    /** Snaps the X coordinate to the grid. */
+  /** Snaps the X coordinate to the grid. */
   public snapToGridX(): void {
     this.x = Math.round(this.x / gridSize) * gridSize;
   }
