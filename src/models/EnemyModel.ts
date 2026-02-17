@@ -23,8 +23,19 @@ type EnemySpecificConfig = ({
 
 export type EnemyConfig = ActorConfig & EnemySpecificConfig;
 
-const ENEMY_DEFAULTS: { [key in ValidSubtype<EntityType.ENEMY>]?: DefaultConfig<ActorSpecificConfig> } = {
-  [EntitySubtype.MOBLIN]: { currentHp: 2, speed: .25 }
+interface EnemyDef {
+  defaultConfig: DefaultConfig<ActorSpecificConfig>;
+  states: StateDefinition;
+  ai: (that: EnemyModel, room: RoomModel) => void;
+}
+
+const ENEMY_DEFS: { [key in ValidSubtype<EntityType.ENEMY>]?: EnemyDef } = {
+  [EntitySubtype.MOBLIN]: {
+    defaultConfig: { currentHp: 2, speed: .25 },
+    states: {
+      [ActorStateType.IDLE]: IdleState
+    }
+  }
 };
 
 /**

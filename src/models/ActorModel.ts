@@ -173,7 +173,8 @@ export abstract class ActorModel extends EntityModel {
   private _hp: number;
   private _maxHp: number;
   private _invincibleTimer: number;
-  private _state: IActorState;
+  private _state: ActorState;
+  private _actionQueue: QueuedAction[] = [];
 
   abstract readonly baseAnimKey: string;
   //#endregion
@@ -221,13 +222,32 @@ export abstract class ActorModel extends EntityModel {
   //#endregion
 
   //#region Methods
-  public changeState(newState: IActorState): void {
+  public queueAction(action: QueuedAction): void {
+    this._actionQueue.push(action);
+  }
+
+  public clearActionQueue(): void {
+    this._actionQueue = [];
+  }
+
+  public nextAction(): QueuedAction | undefined {
+    return this._actionQueue[0];
+  }
+
+  public finishAction(): void {
+    this._actionQueue.shift(1);
+  }
+
+  public changeState(newState: ActorState): void {
+    if(this._state) {
+      this._state.exit(this);
+    }
     this._state = newState;
     this._state.enter(this);
   }
 
   public process(inputDir: Direction | null, room: RoomModel): void {
-    this._state.update(this, room, inputDir);
+    this._state.update(this, room);
   }
 
   public canPass(nx: number, ny: number, room: RoomModel): boolean {
