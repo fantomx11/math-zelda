@@ -1,109 +1,210 @@
-import { MonsterModel } from '../models/MonsterModel.js';
+import { EnemyModel } from '../models/EnemyModel.js';
 import { MoblinModel } from '../models/MoblinModel.js';
 import { RoomModel } from '../models/RoomModel.js';
-import { ActorModel } from '../models/ActorModel.js';
-
 import { PlayerModel } from '../models/PlayerModel.js';
 import { EntityModel } from '../models/EntityModel.js';
 import { PickupModel } from '../models/PickupModel.js';
 import { DungeonScene } from '../scenes/DungeonScene.js';
+import { ActorModel } from '../models/ActorModel.js';
 
-interface ActorInstance {
-  model: ActorModel;
+/**
+ * Interface representing a paired model and its visual representation in the scene.
+ */
+interface EntityInstance {
+  model: EntityModel;
   sprite: Phaser.GameObjects.Sprite;
 }
 
+/**
+ * Manages the lifecycle, collisions, and updates of all entities within the dungeon.
+ */
 export class EntityManager {
+  // #region Static
+
+  // #region Static Properties
+  // No static properties currently defined.
+  // #endregion
+
+  // #region Static Initializer
+  // No static initializer currently defined.
+  // #endregion
+
+  // #region Static Accessors
+  // No static accessors currently defined.
+  // #endregion
+
+  // #region Static Methods
+  // No static methods currently defined.
+  // #endregion
+
+  // #endregion
+
+  // #region Instance
+
+  // #region Instance Properties
+
+  /** The Phaser scene context. */
   private scene: Phaser.Scene;
-  private actors: ActorInstance[] = [];
+
+  /** Collection of active entities and their sprites. */
+  private actors: EntityInstance[] = [];
+
+  /** The horizontal offset applied to entity sprites for dungeon rendering. */
   private dungeonOffset: number;
 
+  // #endregion
+
+  // #region Constructor
+  /**
+   * @param scene - The current Phaser scene.
+   * @param dungeonOffset - The X-axis offset for the dungeon layer.
+   */
   constructor(scene: Phaser.Scene, dungeonOffset: number) {
     this.scene = scene;
     this.dungeonOffset = dungeonOffset;
   }
+  // #endregion
 
-  clear(): void {
+  // #region Instance Accessors
+  /**
+   * Retrieves all current entity instances.
+   * @returns An array of EntityInstances.
+   */
+  public get actorsList(): EntityInstance[] {
+    return this.actors;
+  }
+  // #endregion
+
+  // #region Instance Methods
+  /**
+   * Destroys all entity sprites and clears the actor list.
+   */
+  public clear(): void {
     this.actors.forEach(e => e.sprite.destroy());
     this.actors = [];
   }
 
-  spawn(x: number, y: number, type: string, skin: string = ''): void {
-    let model: MonsterModel;
-    if (type === 'moblin') model = new MoblinModel(x, y);
-    else model = new MonsterModel(x, y, type);
-
-    const sprite = this.scene.add.sprite(x + this.dungeonOffset, y, 'master_sheet');
-    sprite.play(`${model.subtype}_down_idle`);
+  /**
+   * Spawns a new entity into the scene based on a model.
+   * @param model - The data model for the entity to spawn.
+   */
+  public spawn(model: EntityModel): void {
+    const sprite = this.scene.add.sprite(model.x + this.dungeonOffset, model.y, 'master_sheet');
+    sprite.play(model.getAnimKey());
     this.actors.push({ model, sprite });
   }
 
-  addActor(model: ActorModel, sprite: Phaser.GameObjects.Sprite): void {
+  /**
+   * Manually adds an existing actor and sprite to the manager.
+   * @param model - The entity model (note: original code passed model as EntityInstance).
+   * @param sprite - The Phaser sprite associated with the entity.
+   */
+  public addActor(model: any, sprite: Phaser.GameObjects.Sprite): void {
     this.actors.push({ model, sprite });
   }
-  update(room: RoomModel, scene: DungeonScene): void {
-    const remainingActors: ActorInstance[] = [];
 
-    for (const actor of this.actors) {
-      if (actor.model.destroy) {
-        actor.sprite.destroy();
-        actor.model.onDeath(scene);
+  /**
+   * Updates all entities: handles movement, animations, culling, and collisions.
+   * @param room - The current room model.
+   * @param scene - The dungeon scene context.
+   */
+  public update(room: RoomModel, scene: DungeonScene): void {
+    const { remainingActors, culledActors } = this.actors.reduce((acc, actor) => {
+      if (actor.model.tick()) {
+        acc.remainingActors.push(actor);
       } else {
-        actor.model.ai(room);
-        actor.sprite.setPosition(actor.model.x + this.dungeonOffset, actor.model.y);
-        actor.sprite.setAlpha(actor.model.alpha);
-        actor.sprite.setDepth(actor.model.y);
+        acc.culledActors.push(actor);
+      }
+      return acc;
+    }, { remainingActors: [], culledActors: [] } as { remainingActors: EntityInstance[], culledActors: EntityInstance[] });
 
-        const animKey = actor.model.getAnimKey();
-        if (animKey) {
-          actor.sprite.play(animKey);
-          console.log('Playing animation:', animKey);
+    // Remove sprites for entities that are no longer active
+    culledActors.forEach(e => {
+      e.sprite.destroy();
+    });
+
+    remainingActors.forEach(actor => {
+      // Sync sprite position and visuals
+      actor.sprite.setPosition(actor.model.x + this.dungeonOffset, actor.model.y);
+      actor.sprite.setAlpha(actor.model.alpha);
+      actor.sprite.setDepth(actor.model.y);
+
+      // Update animations
+      const animKey = actor.model.getAnimKey();
+      if (animKey) {
+        actor.sprite.play(animKey, true);
+      }
+
+      // Simple proximity-based entity collision
+      remainingActors.forEach(other => {
+        if (actor === other) return;
+        if (Math.abs(actor.model.x - other.model.x) < 12 && Math.abs(actor.model.y - other.model.y) < 12) {
+          actor.model.onTouch(other.model);
         }
-        remainingActors.push(actor);
-      }
-    for (const a1 of this.actors) {
-      for (const a2 of this.actors) {
-        if (a1 === a2) continue;
-        if (Math.abs(a1.model.x - a2.model.x) < 12 && Math.abs(a1.model.y - a2.model.y) < 12) a1.model.onTouch(a2.model);
-      }
-    }
-    }
+      });
+    });
+
     this.actors = remainingActors;
   }
 
-  getActors(): ActorInstance[] {
-    return this.actors;
-  }
-
-  getCollidingEnemy(playerModel: ActorModel): EntityModel | null {
+  /**
+   * Finds an enemy entity colliding with the player.
+   * @param playerModel - The model of the player to check against.
+   * @returns The colliding EntityModel or null.
+   */
+  public getCollidingEnemy(playerModel: any): EntityModel | null {
     const px = playerModel.x;
     const py = playerModel.y;
-    const entry = this.actors.find(e => e.model.type !== 'player' && e.model.type !== 'pickup' && Math.abs(e.model.x - px) < 12 && Math.abs(e.model.y - py) < 12);
+    const entry = this.actors.find(e =>
+      e.model.type !== 'player' &&
+      e.model.type !== 'pickup' &&
+      Math.abs(e.model.x - px) < 12 &&
+      Math.abs(e.model.y - py) < 12
+    );
     return entry ? entry.model : null;
   }
 
-  handleWeaponCollision(box: { x: number; y: number }, damage: number, sourceX: number, sourceY: number): boolean {
+  /**
+   * Handles hit detection between a weapon hit-box and entities.
+   * @param box - The coordinates of the attack.
+   * @param damage - Amount of damage to deal.
+   * @param sourceX - X-coordinate of the damage source (for knockback).
+   * @param sourceY - Y-coordinate of the damage source (for knockback).
+   * @returns True if an entity was killed.
+   */
+  public handleWeaponCollision(box: { x: number; y: number }, damage: number, sourceX: number, sourceY: number): boolean {
     let killed = false;
     for (const e of this.actors) {
-      if (e.model.type === 'player') continue; // Don't hit player
-      if (Math.abs(e.model.x - box.x) < 16 && Math.abs(e.model.y - box.y) < 16) {
-        e.sprite.setTint(0xff0000);
-        this.scene.time.delayedCall(150, () => { if (e.sprite.scene) e.sprite.clearTint(); });
-        if (e.model.takeDamage(damage, sourceX, sourceY)) {
-          killed = true;
+      if (e.model.type === 'enemy' || e.model.type === 'boss') {
+
+        if (Math.abs(e.model.x - box.x) < 16 && Math.abs(e.model.y - box.y) < 16) {
+          // Visual feedback
+          e.sprite.setTint(0xff0000);
+          this.scene.time.delayedCall(150, () => {
+            if (e.sprite && e.sprite.scene) e.sprite.clearTint();
+          });
+
+          if ((<ActorModel>e.model).takeDamage(damage, sourceX, sourceY)) {
+            killed = true;
+          }
         }
       }
     }
     return killed;
   }
 
+  /**
+   * Checks if the player is touching a pickup item.
+   * @param player - The player model.
+   * @returns The PickupModel being touched, or null.
+   */
   public getCollidingPickup(player: PlayerModel): PickupModel | null {
     for (const actor of this.actors) {
       if (actor.model instanceof PickupModel) {
         const dx = player.x - actor.model.x;
         const dy = player.y - actor.model.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < 12) { // Collision radius
+        if (dist < 12) {
           return actor.model as PickupModel;
         }
       }
@@ -111,7 +212,21 @@ export class EntityManager {
     return null;
   }
 
-  count(type: string): number {
-    return this.actors.filter(e => e.model.type === type && !e.model.destroy).length;
+  public getEntities(type?: string): EntityModel[] {
+    return this.actors
+      .filter(e => !type || e.model.type === type)
+      .map(e => e.model);
   }
+
+  /**
+   * Counts active entities of a specific type.
+   * @param type - The string type of the entity.
+   * @returns The count of matching entities.
+   */
+  public count(type: string): number {
+    return this.actors.filter(e => e.model.type === type).length;
+  }
+  // #endregion
+
+  // #endregion
 }

@@ -1,6 +1,7 @@
 import { RoomModel } from './RoomModel';
-import { EntityConfig, EntityModel, ISceneWithItemDrops } from './EntityModel.js';
+import { DefaultConfig, EntityConfig, EntityModel, ISceneWithItemDrops } from './EntityModel.js';
 import { MathZeldaEvent } from '../Event';
+import { EntitySubtype, EntityType } from '../EntityType';
 
 //#region Types and Interfaces
 export enum Direction {
@@ -19,11 +20,19 @@ export interface IActorState {
 /**
  * Configuration for Actor initialization.
  */
-interface ActorConfig extends EntityConfig {
-  hp?: number;
+export interface ActorSpecificConfig {
+  currentHp?: number;
   maxHp?: number;
   speed?: number;
 }
+
+const defaultConfig: DefaultConfig<ActorSpecificConfig> = {
+  currentHp: 1,
+  maxHp: 1,
+  speed: 0.5
+};
+
+export type ActorConfig = EntityConfig & ActorSpecificConfig;
 //#endregion
 
 //#region State Implementations
@@ -44,7 +53,7 @@ export class IdleState implements IActorState {
   }
 
   getAnimKey(actor: ActorModel): string {
-    return actor.getIdleAnimKey();
+    return `${actor.baseAnimKey}_${actor.currentDir}_idle`;
   }
 }
 
@@ -96,7 +105,7 @@ export class MoveState implements IActorState {
   }
 
   getAnimKey(actor: ActorModel) {
-    return `${actor.type}_${actor.currentDir}`;
+    return `${actor.baseAnimKey}_${actor.currentDir}_walk`;
   }
 }
 
@@ -135,7 +144,7 @@ export class KnockbackState implements IActorState {
     }
   }
 
-  getAnimKey(actor: ActorModel) { return ''; }
+  getAnimKey(actor: ActorModel) { return `${actor.baseAnimKey}_${actor.currentDir}_idle`; }
 }
 //#endregion
 
@@ -150,16 +159,18 @@ export abstract class ActorModel extends EntityModel {
   private _maxHp: number;
   private _invincibleTimer: number;
   private _state: IActorState;
+
+  abstract readonly baseAnimKey: string;
   //#endregion
 
   //#region Constructor
-  constructor(x: number, y: number, type: string, subtype: string, scene: ISceneWithItemDrops, config?: ActorConfig) {
-    super(x, y, type, subtype, scene, config);
+  constructor(scene: ISceneWithItemDrops, config: ActorConfig) {
+    super(scene, config);
 
-    const { hp = 1, maxHp = hp, speed = 1 } = config || {};
+    const { currentHp, maxHp, speed}: DefaultConfig<ActorSpecificConfig> = {...config, ...defaultConfig};
 
     this._currentDir = Direction.down;
-    this._hp = hp;
+    this._hp = currentHp || maxHp;
     this._maxHp = maxHp;
     this._speed = speed;
     this._invincibleTimer = 0;
@@ -240,10 +251,6 @@ export abstract class ActorModel extends EntityModel {
     return this._state.getAnimKey(this);
   }
 
-  public getIdleAnimKey(): string {
-    return `${this.subtype}_${this._currentDir}_idle`;
-  }
-
   /** Snaps the X coordinate to the grid. */
   public snapToGridX(): void {
     this.x = Math.round(this.x / this.gridSize) * this.gridSize;
@@ -270,6 +277,10 @@ export abstract class ActorModel extends EntityModel {
     if (amount <= 0 || this.hp >= this._maxHp) return false;
     this.hp += amount;
     return true;
+  }
+
+  public getEntityId(): string {
+    return `${this.subtype}_${this.currentDir}`;
   }
 
   public onDeath(scene: ISceneWithItemDrops): void { }

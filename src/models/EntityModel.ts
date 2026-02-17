@@ -1,10 +1,24 @@
+import { EntitySubtype, EntityType, ValidSubtype } from "../EntityType";
+
 export interface ISceneWithItemDrops extends Phaser.Scene {
   spawnPickup(item: EntityModel): void;
 }
 
 export interface EntityConfig {
+  x: number;
+  y: number;
+  type: EntityType;
+  subtype: EntitySubtype;
   gridSize?: number; // Made optional for defaults to work
 }
+
+export type DefaultConfig<T> = {
+  [K in keyof T]: undefined extends T[K] ? Required<T>[K] : never;
+};
+
+const defaultConfig: DefaultConfig<EntityConfig> = {
+  gridSize: 8,
+};
 
 /**
  * Base class for all entities (Actors, Pickups).
@@ -14,27 +28,27 @@ export abstract class EntityModel {
   private _x: number;
   private _y: number;
   private _gridSize: number;
-  private _type: string;
-  private _subtype: string;
+  private _type: EntityType;
+  private _subtype: EntitySubtype;
   private _scene: ISceneWithItemDrops;
+
+  abstract readonly alpha: number;
   //#endregion
 
   //#region Constructor
   /**
-   * @param x Initial X coordinate.
-   * @param y Initial Y coordinate.
    * @param scene The Phaser scene instance.
-   * @param config Optional configuration for type and grid settings.
+   * @param config Configuration for entity initialization.
    */
-  constructor(x: number, y: number, type: string, subtype: string, scene: ISceneWithItemDrops, config?: EntityConfig) {
-    const { gridSize = 8 } = config || {};
+  constructor(scene: ISceneWithItemDrops, config: EntityConfig) {
+    const { x, y, type, subtype, gridSize } = {...config, ...defaultConfig};
 
     this._x = x;
     this._y = y;
     this._scene = scene;
     this._gridSize = gridSize;
     this._type = type;
-    this._subtype = subtype;
+    this._subtype = subtype as EntitySubtype;
   }
   //#endregion
 
@@ -63,11 +77,11 @@ export abstract class EntityModel {
     this._gridSize = value;
   }
 
-  public get type(): string {
+  public get type(): EntityType {
     return this._type;
   }
 
-  protected set type(value: string) {
+  protected set type(value: EntityType) {
     this._type = value;
   }
 
@@ -79,10 +93,10 @@ export abstract class EntityModel {
     this._scene = value;
   }
 
-  public get subtype(): string {
+  public get subtype(): EntitySubtype {
     return this._subtype;
   }
-  protected set subtype(value: string) {
+  protected set subtype(value: EntitySubtype) {
     this._subtype = value;
   }
   //#endregion
@@ -94,7 +108,9 @@ export abstract class EntityModel {
    */
   abstract onTouch(other: EntityModel): void;
 
+  abstract getAnimKey(): string;
 
+  // returns true if the entity is still active, false if it should be removed
   abstract tick(): boolean;
   //#endregion
 }

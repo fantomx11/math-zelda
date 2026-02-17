@@ -3,6 +3,7 @@ import { RoomModel } from './RoomModel.js';
 import { ITEM_CONFIG, WEAPON_CONFIG } from '../config.js';
 import { ISceneWithItemDrops } from './EntityModel.js';
 import { MathZeldaEvent } from '../Event.js';
+import { EntitySubtype, EntityType, ValidSubtype } from '../EntityType.js';
 
 export class AttackState implements IActorState {
   private timer: number;
@@ -16,7 +17,7 @@ export class AttackState implements IActorState {
     }
   }
   getAnimKey(actor: ActorModel) {
-    return `${actor.type}_atk_${actor.currentDir}`;
+    return `${actor.getEntityId()}_attack`;
   }
 }
 
@@ -27,9 +28,14 @@ export class PlayerModel extends ActorModel {
   public currentWeapon: string;
   public currentItem: string;
 
-  constructor(x: number, y: number, scene: ISceneWithItemDrops) {
-    super(x, y, "player", "player", scene, {
-      hp: 6,
+  constructor(scene: ISceneWithItemDrops, config: { x: number, y: number, subtype: ValidSubtype<EntityType.PLAYER> }) {
+    super(scene, {
+      x: config.x,
+      y: config.y,
+      type: EntityType.PLAYER,
+      subtype: config.subtype,
+      currentHp: 6,
+      maxHp: 6,
       speed: .5
     });
 
@@ -76,11 +82,6 @@ export class PlayerModel extends ActorModel {
     if (this.state instanceof AttackState) return;
     if (this.state instanceof KnockbackState) return;
     this.changeState(new AttackState(duration));
-  }
-
-  getAnimKey(): string {
-    if (this.isAttacking) return `${this.type}_atk_${this.currentDir}`;
-    return super.getAnimKey();
   }
 
   getAttackValue(): number {

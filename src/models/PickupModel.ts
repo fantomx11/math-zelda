@@ -6,9 +6,9 @@ import { EntityConfig, EntityModel, ISceneWithItemDrops } from './EntityModel.js
 export class PickupModel extends EntityModel {
   pickedUp: boolean = false;
 
-  constructor(x: number, y: number, subtype: string, scene: ISceneWithItemDrops, config?: EntityConfig) {
-    super(x, y, 'pickup', subtype, scene, config);
-    this.subtype = subtype;
+  constructor(scene: ISceneWithItemDrops, config: EntityConfig) {
+    super(scene, config);
+    this.subtype = config.subtype as any;
   }
 
   /**

@@ -1,16 +1,17 @@
 import { RoomModel } from '../models/RoomModel.js';
-import { ActorModel, Direction, IdleState } from '../models/ActorModel.js';
+import { Direction, IdleState } from '../models/ActorModel.js';
 import { PlayerModel } from '../models/PlayerModel.js';
 import { SKIN_CONFIG, WEAPON_CONFIG, ITEM_CONFIG } from '../config.js';
 import { GameMode } from '../modes/GameMode.js';
-import { PickupModel } from '../models/PickupModel.js';
 import { TitleMode } from '../modes/TitleMode.js';
 import { DungeonManager } from '../managers/DungeonManager.js';
 import { HUDManager } from '../managers/HUDManager.js';
 import { WeaponPickupModel } from '../models/WeaponPickupModel.js';
-import { EntityManager } from '../managers/EnemyManager.js';
-import { MonsterModel } from '../models/MonsterModel.js';
+import { EntityManager } from '../managers/EntityManager.js';
+import { EnemyModel } from '../models/EnemyModel.js';
 import { MathZeldaEvent } from '../Event.js';
+import { EntityModel } from '../models/EntityModel.js';
+import { ENTITY_TYPE_MAP, EntityType, ValidSubtype } from '../EntityType.js';
 
 /**
  * Main gameplay scene handling the dungeon view, player input, and game loop.
@@ -130,7 +131,8 @@ export class DungeonScene extends Phaser.Scene {
     this.dungeonManager = new DungeonManager(4);
     this.entityManager = new EntityManager(this, this.dungeonOffset);
 
-    this.loadSkin('Link'); // Load skin before room so player anims exist
+    ENTITY_TYPE_MAP[EntityType.PLAYER].forEach(skin => this.loadSkin(skin));
+
     this.loadEnemies();
     this.createEnemyAnims();
 
@@ -159,9 +161,7 @@ export class DungeonScene extends Phaser.Scene {
   }
 
   updatePauseState(): void {
-    const enemies = this.entityManager.getActors()
-        .map(a => a.model)
-        .filter(m => m.type === 'enemy') as MonsterModel[];
+    const enemies = this.entityManager.getEntities("enemy")
     this.events.emit(MathZeldaEvent.GAME_PAUSED, { player: this.playerModel, enemies });
   }
 
@@ -186,42 +186,39 @@ export class DungeonScene extends Phaser.Scene {
    * Loads sprite frames and animations for a specific character skin.
    * @param skinName The name of the skin to load.
    */
-  loadSkin(skinName: string): void {
-    const idx = SKIN_CONFIG.skins.indexOf(skinName);
-    if (idx === -1) return;
+  loadSkin(subtype: ValidSubtype<EntityType.PLAYER>): void {
+    const skinDefinition = SKIN_CONFIG.skinDefs[subtype];
 
     const { x: startX, y: startY } = SKIN_CONFIG.startPos;
-    const { w, h } = SKIN_CONFIG.frameSize;
-    const skinY = startY + (idx * h);
+    const w = 16;
+    const h = 16;
+
+    const skinX = skinDefinition.x;
+    const skinY = skinDefinition.y;
 
     // Create animations for this skin
     for (const [animKey, config] of Object.entries(SKIN_CONFIG.anims)) {
       const frames: Phaser.Types.Animations.AnimationFrame[] = [];
       for (let i = 0; i < config.length; i++) {
-        const frameName = `${skinName}_${animKey}_${i}`;
+        const frameName = `${EntityType.PLAYER}_${subtype}_${animKey}_${i}`;
+
         // Add frame to texture manager
         this.textures.get('master_sheet').add(
           frameName, 0,
-          startX + (config.start + i) * w, skinY, w, h
+          skinX, skinY, w, h
         );
         frames.push({ key: 'master_sheet', frame: frameName });
       }
+
+      let finalAnimKey = `${EntityType.PLAYER}_${subtype}_${animKey}`
+
       // Remove existing if switching skins
-      const walkAnimKey = `player_${animKey}`;
-      this.anims.remove(walkAnimKey);
+      this.anims.remove(finalAnimKey);
       this.anims.create({
-        key: walkAnimKey,
+        key: finalAnimKey,
         frames: frames,
         frameRate: config.rate,
         repeat: config.repeat
-      });
-
-      // Create single-frame idle animation from the first frame of the walk
-      const idleAnimKey = `${walkAnimKey}_idle`;
-      this.anims.remove(idleAnimKey);
-      this.anims.create({
-        key: idleAnimKey,
-        frames: [frames[0]]
       });
     }
   }
@@ -489,7 +486,7 @@ export class DungeonScene extends Phaser.Scene {
     // 3. Re-create the player's sprite from the persistent model and add to the manager.
     this.playerView = this.add.sprite(this.playerModel.x + this.dungeonOffset, this.playerModel.y, 'master_sheet');
     this.playerView.play(`player_${this.playerModel.currentDir}`);
-    this.entityManager.addActor(this.playerModel, this.playerView);
+    this.entityManager.addEntity(this.playerModel, this.playerView);
 
     // 4. Spawn Enemies for the new room (if not cleared)
     if (cell.type !== 'start' && !cell.cleared) {
@@ -589,9 +586,9 @@ export class DungeonScene extends Phaser.Scene {
    * Spawns a pickup item at the given location.
    * @param item The actor model to spawn (e.g. a PickupModel).
    */
-  spawnPickup(item: ActorModel): void {
+  spawnPickup(item: EntityModel): void {
     const pickupSprite = this.add.sprite(item.x + this.dungeonOffset, item.y, 'master_sheet', item.getAnimKey());
-    this.entityManager.addActor(item, pickupSprite);
+    this.entityManager.addEntity(item, pickupSprite);
   }
 
   /**

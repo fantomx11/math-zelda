@@ -1,6 +1,6 @@
 import { DungeonManager } from './DungeonManager.js';
 import { PlayerModel } from '../models/PlayerModel.js';
-import { MonsterModel } from '../models/MonsterModel.js';
+import { EnemyModel } from '../models/EnemyModel.js';
 import { WEAPON_CONFIG, ITEM_CONFIG } from '../config.js';
 import { MathZeldaEvent } from '../Event.js';
 
@@ -110,7 +110,7 @@ export class HUDManager {
       this.updateMap(data.dungeon);
     });
 
-    this.scene.events.on(MathZeldaEvent.GAME_PAUSED, (data: { player: PlayerModel, enemies: MonsterModel[] }) => {
+    this.scene.events.on(MathZeldaEvent.GAME_PAUSED, (data: { player: PlayerModel, enemies: EnemyModel[] }) => {
       this.slide(true);
       this.updatePauseScreen(data.player, data.enemies);
     });
@@ -152,7 +152,7 @@ export class HUDManager {
     }
   }
 
-  updatePauseScreen(player: PlayerModel, enemies: MonsterModel[]): void {
+  updatePauseScreen(player: PlayerModel, enemies: EnemyModel[]): void {
     // Update Weapon visibility
     this.weaponSprites.forEach((sprite, i) => {
         const name = WEAPON_CONFIG.names[i];
@@ -166,7 +166,7 @@ export class HUDManager {
     const attackVal = player.getAttackValue();
 
     // Group enemies by type/math problem to avoid duplicates
-    const uniqueProblems = new Map<string, MonsterModel>();
+    const uniqueProblems = new Map<string, EnemyModel>();
     enemies.forEach(e => {
         const key = `${e.subtype}-${e.mathProblem.a}x${e.mathProblem.b}`;
         if (!uniqueProblems.has(key)) uniqueProblems.set(key, e);
@@ -175,11 +175,10 @@ export class HUDManager {
     let y = 0;
     uniqueProblems.forEach(monster => {
         const sprite = this.scene.add.sprite(0, y, 'master_sheet');
-        const idleKey = `${monster.subtype}_down_idle`;
-        const walkKey = `${monster.subtype}_down`;
+        const idleKey = `${monster.baseAnimKey}_down_idle`;
+        const walkKey = `${monster.baseAnimKey}_down_walk`;
 
         if (this.scene.anims.exists(idleKey)) sprite.play(idleKey);
-        else sprite.play(monster.getIdleAnimKey());
 
         const problem = `${monster.mathProblem.a}x${monster.mathProblem.b}=?`;
         const text = this.scene.add.bitmapText(16, y - 4, 'arcade', problem);
