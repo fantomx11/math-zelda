@@ -180,27 +180,29 @@ export abstract class ActorModel extends EntityModel {
 
   //#region Accessors
   public get speed(): number { return this._speed; }
+  public get currentDir(): Direction { return this._currentDir; }
+  public get hp(): number { return this._hp; }
+  public get state(): IActorState { return this._state; }
+  public get isDead(): boolean { return this._hp <= 0; }
+  public get isInvincible(): boolean { return this._invincibleTimer > Date.now(); }
+  public get alpha(): number { return this.isInvincible ? 0.5 : 1; }
+  //#endregion
+
+  //#region Mutators
+  
   protected set speed(value: number) { this._speed = value; }
 
-  public get currentDir(): Direction { return this._currentDir; }
-  public set currentDir(value: Direction) { this._currentDir = value; }
-
-  public get hp(): number { return this._hp; }
+  protected set currentDir(value: Direction) { this._currentDir = value; }
+  
   protected set hp(value: number) {
     value = Math.max(0, Math.min(this._maxHp, value));
     if (value === this._hp) return;
     this._hp = value;
     this.scene.events.emit(MathZeldaEvent.ACTOR_HP_CHANGED, { hp: this._hp, actor: this });
   }
-
-  public get state(): IActorState { return this._state; }
+  
   protected set state(value: IActorState) { this._state = value; }
-
-  public get isDead(): boolean { return this._hp <= 0; }
-
-  public get isInvincible(): boolean { return this._invincibleTimer > Date.now(); }
-
-  public get alpha(): number { return this.isInvincible ? 0.5 : 1; }
+  
   //#endregion
 
   //#region Methods
@@ -251,21 +253,18 @@ export abstract class ActorModel extends EntityModel {
     return this._state.getAnimKey(this);
   }
 
-  /** Snaps the X coordinate to the grid. */
-  public snapToGridX(): void {
-    this.x = Math.round(this.x / this.gridSize) * this.gridSize;
+  public move(direction: Direction, room: RoomModel): void {
+    this.face(direction);
+    if(direction == Direction.up || direction == Direction.down) {
+      this.snapToGridX();
+      this.y += direction == Direction.up ? -this.speed : this.speed;
+    } else {
+      this.snapToGridY();
+      this.x += direction == Direction.left ? -this.speed : this.speed;
+    }
   }
 
-  /** Snaps the Y coordinate to the grid. */
-  public snapToGridY(): void {
-    this.y = Math.round(this.y / this.gridSize) * this.gridSize;
-  }
-
-  /** Snaps both X and Y coordinates to the grid. */
-  public snapToGrid(): void {
-    this.snapToGridX();
-    this.snapToGridY();
-  }
+  abstract attack(direction: Direction, room: RoomModel): void;
 
   /** Updates the actor's position. */
   public moveTo(x: number, y: number): void {

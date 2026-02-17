@@ -1,5 +1,7 @@
 import { EntitySubtype, EntityType, ValidSubtype } from "../EntityType";
 
+const gridSize = 8;
+
 export interface ISceneWithItemDrops extends Phaser.Scene {
   spawnPickup(item: EntityModel): void;
 }
@@ -9,15 +11,10 @@ export interface EntityConfig {
   y: number;
   type: EntityType;
   subtype: EntitySubtype;
-  gridSize?: number; // Made optional for defaults to work
 }
 
 export type DefaultConfig<T> = {
   [K in keyof T]: undefined extends T[K] ? Required<T>[K] : never;
-};
-
-const defaultConfig: DefaultConfig<EntityConfig> = {
-  gridSize: 8,
 };
 
 /**
@@ -27,7 +24,6 @@ export abstract class EntityModel {
   //#region Properties
   private _x: number;
   private _y: number;
-  private _gridSize: number;
   private _type: EntityType;
   private _subtype: EntitySubtype;
   private _scene: ISceneWithItemDrops;
@@ -46,13 +42,24 @@ export abstract class EntityModel {
     this._x = x;
     this._y = y;
     this._scene = scene;
-    this._gridSize = gridSize;
     this._type = type;
     this._subtype = subtype as EntitySubtype;
   }
   //#endregion
 
   //#region Accessors
+  public isOnXGrid(): boolean {
+    return this.x % gridSize === 0;
+  }
+
+  public isOnYGrid(): boolean {
+    return this.y % gridSize === 0;
+  }
+
+  public isOnGrid(): boolean {
+    return this.isOnXGrid && this.isOnYGrid;
+  }
+
   public get x(): number {
     return this._x;
   }
@@ -67,14 +74,6 @@ export abstract class EntityModel {
 
   protected set y(value: number) {
     this._y = value;
-  }
-
-  public get gridSize(): number {
-    return this._gridSize;
-  }
-
-  protected set gridSize(value: number) {
-    this._gridSize = value;
   }
 
   public get type(): EntityType {
@@ -109,6 +108,22 @@ export abstract class EntityModel {
   abstract onTouch(other: EntityModel): void;
 
   abstract getAnimKey(): string;
+
+    /** Snaps the X coordinate to the grid. */
+  public snapToGridX(): void {
+    this.x = Math.round(this.x / gridSize) * gridSize;
+  }
+
+  /** Snaps the Y coordinate to the grid. */
+  public snapToGridY(): void {
+    this.y = Math.round(this.y / gridSize) * gridSize;
+  }
+
+  /** Snaps both X and Y coordinates to the grid. */
+  public snapToGrid(): void {
+    this.snapToGridX();
+    this.snapToGridY();
+  }
 
   // returns true if the entity is still active, false if it should be removed
   abstract tick(): boolean;
