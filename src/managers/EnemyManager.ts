@@ -38,7 +38,7 @@ export class EntityManager {
     if (this.typeEquations.has(model.subtype)) {
         model.mathProblem = { ...this.typeEquations.get(model.subtype)! };
     } else {
-        model.mathProblem.a = Phaser.Math.Between(0, level);
+        model.mathProblem.a = level;
         model.mathProblem.b = Phaser.Math.Between(0, 9);
         model.mathProblem.answer = model.mathProblem.a * model.mathProblem.b;
         this.typeEquations.set(model.subtype, { ...model.mathProblem });

@@ -30,7 +30,7 @@ export class PlayerModel extends ActorModel {
     super(x, y, 6, .5); // HP: 6, Speed: 2
     this.type = 'player';
     this.subtype = "player";
-    this.weapons = ['Rapier', "Biggoron's Sword"];
+    this.weapons = ['Rapier'];
     this.items = [...ITEM_CONFIG.names];
     this.currentWeapon = this.weapons[0];
     this.currentItem = this.items[0];
