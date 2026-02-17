@@ -10,6 +10,7 @@ import { HUDManager } from '../managers/HUDManager.js';
 import { WeaponPickupModel } from '../models/WeaponPickupModel.js';
 import { EntityManager } from '../managers/EnemyManager.js';
 import { MonsterModel } from '../models/MonsterModel.js';
+import { MathZeldaEvent } from '../Event.js';
 
 /**
  * Main gameplay scene handling the dungeon view, player input, and game loop.
@@ -49,10 +50,10 @@ export class DungeonScene extends Phaser.Scene {
     // Input Stack for "Last Key Priority" (Movement)
     this.inputStack = [];
     const keyMap: Record<number, Direction> = {
-      [Phaser.Input.Keyboard.KeyCodes.LEFT]: 'left',
-      [Phaser.Input.Keyboard.KeyCodes.RIGHT]: 'right',
-      [Phaser.Input.Keyboard.KeyCodes.UP]: 'up',
-      [Phaser.Input.Keyboard.KeyCodes.DOWN]: 'down'
+      [Phaser.Input.Keyboard.KeyCodes.LEFT]: Direction.left,
+      [Phaser.Input.Keyboard.KeyCodes.RIGHT]: Direction.right,
+      [Phaser.Input.Keyboard.KeyCodes.UP]: Direction.up,
+      [Phaser.Input.Keyboard.KeyCodes.DOWN]: Direction.down
     };
 
     this.input.keyboard!.on('keydown', (event: KeyboardEvent) => {
@@ -89,6 +90,10 @@ export class DungeonScene extends Phaser.Scene {
       if (dir) this.inputStack = this.inputStack.filter(d => d !== dir);
     });
 
+    this.events.on(MathZeldaEvent.MONSTER_DIED, () => {
+      if (this.entityManager.count("enemy") === 0) this.handleRoomClear();
+    });
+
     if (data?.autoStart) {
       this.startGame();
     } else {
@@ -100,7 +105,7 @@ export class DungeonScene extends Phaser.Scene {
   startGame(): void {
     this.isGameStarted = true;
     this.roomModel = new RoomModel();
-    this.playerModel = new PlayerModel(128, 128);
+    this.playerModel = new PlayerModel(128, 128, this);
     (window as any).playerModel = this.playerModel; // Add this line for debugging
     this.registerDoorFrames();
     this.registerMapTiles();
@@ -146,15 +151,18 @@ export class DungeonScene extends Phaser.Scene {
 
   togglePause(): void {
     this.isPaused = !this.isPaused;
-    this.hudManager.slide(this.isPaused);
-    if (this.isPaused) this.updatePauseState();
+    if (this.isPaused) {
+      this.updatePauseState();
+    } else {
+      this.events.emit(MathZeldaEvent.GAME_RESUMED);
+    }
   }
 
   updatePauseState(): void {
     const enemies = this.entityManager.getActors()
         .map(a => a.model)
         .filter(m => m.type === 'enemy') as MonsterModel[];
-    this.hudManager.updatePauseScreen(this.playerModel, enemies);
+    this.events.emit(MathZeldaEvent.GAME_PAUSED, { player: this.playerModel, enemies });
   }
 
   pushMode(mode: GameMode): void {
@@ -510,7 +518,7 @@ export class DungeonScene extends Phaser.Scene {
     this.roomModel.wallTypes.e = getDoorState(cell.east);
 
     cell.seen = true;
-    this.hudManager.updateMap(this.dungeonManager);
+    this.events.emit(MathZeldaEvent.ROOM_CHANGED, { dungeon: this.dungeonManager });
     this.drawDoors();
   }
 
@@ -536,13 +544,12 @@ export class DungeonScene extends Phaser.Scene {
     if (this.dungeonManager.switchRoom(dx, dy)) {
       this.loadRoom(this.dungeonManager.roomX, this.dungeonManager.roomY);
 
-      if (dy === -1) this.playerModel.y = 224;
-      else if (dy === 1) this.playerModel.y = 32;
-      else if (dx === -1) this.playerModel.x = 224;
-      else if (dx === 1) this.playerModel.x = 32;
+      if (dy === -1) this.playerModel.moveTo(this.playerModel.x, 224);
+      else if (dy === 1) this.playerModel.moveTo(this.playerModel.x, 32);
+      else if (dx === -1) this.playerModel.moveTo(224, this.playerModel.y);
+      else if (dx === 1) this.playerModel.moveTo(32, this.playerModel.y);
 
-      this.playerModel.x = Math.round(this.playerModel.x / 8) * 8;
-      this.playerModel.y = Math.round(this.playerModel.y / 8) * 8;
+      this.playerModel.snapToGrid();
       this.playerModel.changeState(new IdleState());
     }
   }
@@ -569,7 +576,6 @@ export class DungeonScene extends Phaser.Scene {
     if (cell.west) this.roomModel.wallTypes.w = 'open';
     if (cell.east) this.roomModel.wallTypes.e = 'open';
     this.drawDoors();
-    this.hudManager.updateHearts(this.playerModel.hp);
 
     // Spawn Item Room Reward
     if (cell.type === 'item' && !cell.itemCollected) {
@@ -683,7 +689,6 @@ export class DungeonScene extends Phaser.Scene {
     const enemy = this.entityManager.getCollidingEnemy(this.playerModel);
     if (enemy) {
       const isDead = this.playerModel.takeDamage(1, enemy.x, enemy.y);
-      this.hudManager.updateHearts(this.playerModel.hp);
 
       if (isDead) {
         this.scene.restart({ autoStart: true, level: this.currentLevel });

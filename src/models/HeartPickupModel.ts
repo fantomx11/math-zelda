@@ -1,3 +1,4 @@
+import { ISceneWithItemDrops } from './EntityModel.js';
 import { PickupModel } from './PickupModel.js';
 import { PlayerModel } from './PlayerModel.js';
 
@@ -5,8 +6,8 @@ import { PlayerModel } from './PlayerModel.js';
  * Represents a heart pickup that restores player health.
  */
 export class HeartPickupModel extends PickupModel {
-  constructor(x: number, y: number) {
-    super(x, y, 'heart');
+  constructor(x: number, y: number, scene: ISceneWithItemDrops) {
+    super(x, y, 'heart', scene);
   }
 
   /**
@@ -16,12 +17,6 @@ export class HeartPickupModel extends PickupModel {
    * @returns True if the heart was collected, false if player is at max health.
    */
   onPickup(player: PlayerModel): boolean {
-    const maxHp = 6; // Assuming max HP is 6 for now.
-    if (player.hp < maxHp) {
-      player.hp = Math.min(maxHp, player.hp + 2);
-      this.hp = 0; // "Kill" the pickup so it gets removed
-      return true;
-    }
-    return false;
+    return player.heal(2);
   }
 }

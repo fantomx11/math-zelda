@@ -1,25 +1,21 @@
-import { ActorModel } from './ActorModel.js';
 import { PlayerModel } from './PlayerModel.js';
-import { RoomModel } from './RoomModel.js';
-import { EntityModel } from './EntityModel.js';
+import { EntityConfig, EntityModel, ISceneWithItemDrops } from './EntityModel.js';
 
  /** Represents an item on the ground that can be picked up.
  */
-export class PickupModel extends ActorModel {
-  public subtype: string;
+export class PickupModel extends EntityModel {
+  pickedUp: boolean = false;
 
-  constructor(x: number, y: number, pickupType: string) {
-    super(x, y);
-    this.type = 'pickup';
-    this.subtype = pickupType;
-    this.hp = 1; // It's "killed" when picked up.
+  constructor(x: number, y: number, subtype: string, scene: ISceneWithItemDrops, config?: EntityConfig) {
+    super(x, y, 'pickup', subtype, scene, config);
+    this.subtype = subtype;
   }
 
   /**
    * Pickups don't have AI.
    */
-  ai(room: RoomModel): void {
-    // No-op
+  tick(): boolean {
+    return this.pickedUp;
   }
 
   /**
@@ -44,6 +40,8 @@ export class PickupModel extends ActorModel {
   }
 
   onTouch(other: EntityModel): void {
-    if (other.type === 'player') this.onPickup(other as PlayerModel);
+    if (other.type === 'player' && this.onPickup(other as PlayerModel)) {
+      this.pickedUp = true;
+    };
   }
 }

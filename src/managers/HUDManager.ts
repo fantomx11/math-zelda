@@ -2,6 +2,7 @@ import { DungeonManager } from './DungeonManager.js';
 import { PlayerModel } from '../models/PlayerModel.js';
 import { MonsterModel } from '../models/MonsterModel.js';
 import { WEAPON_CONFIG, ITEM_CONFIG } from '../config.js';
+import { MathZeldaEvent } from '../Event.js';
 
 export class HUDManager {
   private scene: Phaser.Scene;
@@ -99,6 +100,24 @@ export class HUDManager {
     
     this.container.add(this.heartsContainer);
     this.container.add(this.mapContainer);
+
+    // Event Listeners
+    this.scene.events.on(MathZeldaEvent.PLAYER_HP_CHANGED, (data: { hp: number }) => {
+      this.updateHearts(data.hp);
+    });
+
+    this.scene.events.on(MathZeldaEvent.ROOM_CHANGED, (data: { dungeon: DungeonManager }) => {
+      this.updateMap(data.dungeon);
+    });
+
+    this.scene.events.on(MathZeldaEvent.GAME_PAUSED, (data: { player: PlayerModel, enemies: MonsterModel[] }) => {
+      this.slide(true);
+      this.updatePauseScreen(data.player, data.enemies);
+    });
+
+    this.scene.events.on(MathZeldaEvent.GAME_RESUMED, () => {
+      this.slide(false);
+    });
   }
 
   updateHearts(hp: number, maxHearts: number = 3): void {

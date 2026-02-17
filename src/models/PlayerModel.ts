@@ -1,13 +1,15 @@
 import { ActorModel, Direction, IActorState, IdleState, KnockbackState } from './ActorModel.js';
 import { RoomModel } from './RoomModel.js';
 import { ITEM_CONFIG, WEAPON_CONFIG } from '../config.js';
+import { ISceneWithItemDrops } from './EntityModel.js';
+import { MathZeldaEvent } from '../Event.js';
 
 export class AttackState implements IActorState {
   private timer: number;
   constructor(duration: number) {
     this.timer = Date.now() + duration;
   }
-  enter(actor: ActorModel) {}
+  enter(actor: ActorModel) { }
   update(actor: ActorModel, room: RoomModel, inputDir: Direction | null) {
     if (Date.now() > this.timer) {
       actor.changeState(new IdleState());
@@ -19,25 +21,48 @@ export class AttackState implements IActorState {
 }
 
 export class PlayerModel extends ActorModel {
-  subtype: string;
-  public inputDir: Direction | null = null;  
+  public inputDir: Direction | null = null;
   public weapons: string[] = [];
   public items: string[] = [];
   public currentWeapon: string;
   public currentItem: string;
 
-  constructor(x: number, y: number) {
-    super(x, y, 6, .5); // HP: 6, Speed: 2
-    this.type = 'player';
-    this.subtype = "player";
-    this.weapons = ['Rapier'];
+  constructor(x: number, y: number, scene: ISceneWithItemDrops) {
+    super(x, y, "player", "player", scene, {
+      hp: 6,
+      speed: .5
+    });
+
+    this.weapons = [WEAPON_CONFIG.names[0]];
     this.items = [...ITEM_CONFIG.names];
     this.currentWeapon = this.weapons[0];
     this.currentItem = this.items[0];
   }
 
+  public get hp(): number {
+    return super.hp;
+  }
+
+  protected set hp(value: number) {
+    const oldHp = this.hp;
+
+    super.hp = value;
+
+    if(oldHp !== this.hp) {
+      this.scene.events.emit(MathZeldaEvent.PLAYER_HP_CHANGED, { hp: this.hp, player: this });
+    }
+  }
+
   ai(room: RoomModel): void {
     this.process(this.inputDir, room);
+  }
+
+  public takeDamage(amount: number, srcX: number, srcY: number): boolean {
+    if (super.takeDamage(amount, srcX, srcY)) {
+      this.scene.events.emit(MathZeldaEvent.PLAYER_DIED);
+      return true;
+    }
+    return false;
   }
 
   /**

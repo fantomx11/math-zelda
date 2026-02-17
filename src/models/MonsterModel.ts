@@ -1,23 +1,20 @@
 import { ActorModel, Direction, KnockbackState, MoveState } from './ActorModel.js';
-import { EntityModel, ISceneWithItemDrops } from './EntityModel.js';
+import { EntityConfig, EntityModel, ISceneWithItemDrops } from './EntityModel.js';
 import { HeartPickupModel } from './HeartPickupModel.js';
 import { PlayerModel } from './PlayerModel.js';
 import { RoomModel } from './RoomModel.js';
+import { MathZeldaEvent } from '../Event.js';
 
 /**
  * Base class for enemies with basic AI.
  */
 export class MonsterModel extends ActorModel {
   public static DAMAGE_AMOUNT: number = 1;
-  public type: string;
-  public subtype: string;
   public aiTimer: number;
   public mathProblem: { a: number, b: number, answer: number };
 
-  constructor(x: number, y: number, subtype: string, speed: number = .5) {
-    super(x, y, speed);
-    this.type = "enemy";
-    this.subtype = subtype;
+  constructor(x: number, y: number, type: string, subtype: string, scene: ISceneWithItemDrops, config?: EntityConfig) {
+    super(x, y, type, subtype, scene, config);
     this.hp = 3;
     this.aiTimer = 0;
     this.mathProblem = { a: 0, b: 0, answer: 0 };
@@ -46,7 +43,7 @@ export class MonsterModel extends ActorModel {
     }
 
     // Pick a random direction
-    const dirs: Direction[] = ['up', 'down', 'left', 'right'];
+    const dirs: Direction[] = [Direction.up, Direction.down, Direction.left, Direction.right];
     const pick = dirs[Math.floor(Math.random() * dirs.length)];
     this.process(pick, room);
 
@@ -59,8 +56,9 @@ export class MonsterModel extends ActorModel {
    * @param scene The scene context.
    */
   onDeath(scene: ISceneWithItemDrops): void {
+    scene.events.emit(MathZeldaEvent.MONSTER_DIED, { monster: this });
     if (Math.random() < 0.25) {
-      scene.spawnPickup(new HeartPickupModel(this.x, this.y));
+      scene.spawnPickup(new HeartPickupModel(this.x, this.y, scene));
     }
   }
 
