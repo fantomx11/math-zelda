@@ -91,7 +91,7 @@ export class DungeonScene extends Phaser.Scene {
       if (dir) this.inputStack = this.inputStack.filter(d => d !== dir);
     });
 
-    this.events.on(MathZeldaEvent.ENTITY_CULLED, () => {
+    this.events.on(MathZeldaEvent.EntityCulled, () => {
       if (this.entityManager.count("enemy") === 0) this.handleRoomClear();
     });
 
@@ -156,13 +156,13 @@ export class DungeonScene extends Phaser.Scene {
     if (this.isPaused) {
       this.updatePauseState();
     } else {
-      this.events.emit(MathZeldaEvent.GAME_RESUMED);
+      this.events.emit(MathZeldaEvent.GameResumed);
     }
   }
 
   updatePauseState(): void {
     const enemies = this.entityManager.getEntities("enemy")
-    this.events.emit(MathZeldaEvent.GAME_PAUSED, { player: this.playerModel, enemies });
+    this.events.emit(MathZeldaEvent.GamePaused, { player: this.playerModel, enemies });
   }
 
   pushMode(mode: GameMode): void {
@@ -515,7 +515,7 @@ export class DungeonScene extends Phaser.Scene {
     this.roomModel.wallTypes.e = getDoorState(cell.east);
 
     cell.seen = true;
-    this.events.emit(MathZeldaEvent.ROOM_CHANGED, { dungeon: this.dungeonManager });
+    this.events.emit(MathZeldaEvent.RoomChanged, { dungeon: this.dungeonManager });
     this.drawDoors();
   }
 

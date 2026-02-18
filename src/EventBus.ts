@@ -1,4 +1,5 @@
-import { EventPayloads, MathZeldaEvent } from './Event';
+import { EventPayloads } from './Event';
+import { MathZeldaEvent } from "./Enums";
 
 type EventCallback<T extends MathZeldaEvent> = (payload: EventPayloads[T]) => void;
 

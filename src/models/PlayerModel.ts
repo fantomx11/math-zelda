@@ -45,7 +45,7 @@ export class PlayerModel extends ActorModel {
     super.hp = value;
 
     if(oldHp !== this.hp) {
-      EventBus.emit(MathZeldaEvent.PLAYER_HP_CHANGED);
+      EventBus.emit(MathZeldaEvent.PlayerHpChanged);
     }
   }
 
@@ -73,7 +73,7 @@ export class PlayerModel extends ActorModel {
 
   public takeDamage(amount: number, srcX: number, srcY: number): boolean {
     if (super.takeDamage(amount, srcX, srcY)) {
-      EventBus.emit(MathZeldaEvent.PLAYER_DIED);
+      EventBus.emit(MathZeldaEvent.PlayerDied);
       return true;
     }
     return false;

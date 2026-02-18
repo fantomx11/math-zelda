@@ -30,14 +30,14 @@ class GameState {
     this._rooms = RoomModel.generateLevel(level);
     this._currentRoomX = 0;
     this._currentRoomY = 0;
-    EventBus.emit(MathZeldaEvent.ROOM_CHANGED);
+    EventBus.emit(MathZeldaEvent.RoomChanged);
   }
 
   public moveToRoom(direction: Direction) {
     const newRoom = this._currentRoom.getAdjacentRoom(direction);
     if (newRoom) {
       this._currentRoom = newRoom;
-      EventBus.emit(MathZeldaEvent.ROOM_CHANGED, { room: newRoom });
+      EventBus.emit(MathZeldaEvent.RoomChanged, { room: newRoom });
     }
   }
 
@@ -59,7 +59,7 @@ class GameState {
     this._entities = liveEntities;
 
     culledEntities.forEach(entity => {
-      EventBus.emit(MathZeldaEvent.ENTITY_CULLED, { entity });
+      EventBus.emit(MathZeldaEvent.EntityCulled, { entity });
     });
   }
 }

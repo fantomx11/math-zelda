@@ -102,20 +102,20 @@ export class HUDManager {
     this.container.add(this.mapContainer);
 
     // Event Listeners
-    this.scene.events.on(MathZeldaEvent.PLAYER_HP_CHANGED, (data: { hp: number }) => {
+    this.scene.events.on(MathZeldaEvent.PlayerHpChanged, (data: { hp: number }) => {
       this.updateHearts(data.hp);
     });
 
-    this.scene.events.on(MathZeldaEvent.ROOM_CHANGED, (data: { dungeon: DungeonManager }) => {
+    this.scene.events.on(MathZeldaEvent.RoomChanged, (data: { dungeon: DungeonManager }) => {
       this.updateMap(data.dungeon);
     });
 
-    this.scene.events.on(MathZeldaEvent.GAME_PAUSED, (data: { player: PlayerModel, enemies: EnemyModel[] }) => {
+    this.scene.events.on(MathZeldaEvent.GamePaused, (data: { player: PlayerModel, enemies: EnemyModel[] }) => {
       this.slide(true);
       this.updatePauseScreen(data.player, data.enemies);
     });
 
-    this.scene.events.on(MathZeldaEvent.GAME_RESUMED, () => {
+    this.scene.events.on(MathZeldaEvent.GameResumed, () => {
       this.slide(false);
     });
   }

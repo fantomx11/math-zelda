@@ -94,7 +94,7 @@ export class EnemyModel extends ActorModel {
    * @param scene The scene context.
    */
   onDeath(scene: SceneWithItemDrops): void {
-    scene.events.emit(MathZeldaEvent.ENTITY_CULLED, { monster: this });
+    scene.events.emit(MathZeldaEvent.EntityCulled, { monster: this });
     if (Math.random() < 0.25) {
       scene.spawnPickup(new HeartPickupModel(scene, { x: this.x, y: this.y }));
     }
