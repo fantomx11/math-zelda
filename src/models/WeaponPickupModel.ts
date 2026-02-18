@@ -1,12 +1,12 @@
 import { PickupModel } from './PickupModel.js';
 import { PlayerModel } from './PlayerModel.js';
 import { EntityType } from '../EntityType.js';
-import { ISceneWithItemDrops } from './EntityModel.js';
+import { SceneWithItemDrops } from './EntityModel.js';
 
 export class WeaponPickupModel extends PickupModel {
   public onCollect?: () => void;
 
-  constructor(scene: ISceneWithItemDrops, config: { x: number, y: number, subtype: string }) {
+  constructor(scene: SceneWithItemDrops, config: { x: number, y: number, subtype: string }) {
     super(scene, { x: config.x, y: config.y, type: 'pickup' as EntityType, subtype: config.subtype });
   }
 

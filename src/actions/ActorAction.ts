@@ -1,6 +1,4 @@
 // src/actions/ActorActions.ts
-import { ActorModel, Direction } from '../models/ActorModel';
-import { RoomModel } from '../models/RoomModel';
 import { Direction } from '../models/ActorModel';
 
 export enum ActionType {

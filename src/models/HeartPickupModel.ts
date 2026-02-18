@@ -1,4 +1,4 @@
-import { ISceneWithItemDrops } from './EntityModel.js';
+import { SceneWithItemDrops } from './EntityModel.js';
 import { PickupModel } from './PickupModel.js';
 import { PlayerModel } from './PlayerModel.js';
 import { EntityType } from '../EntityType.js';
@@ -9,7 +9,7 @@ import { EntityType } from '../EntityType.js';
 export class HeartPickupModel extends PickupModel {
   private lifespan: number = 300; // ~5 seconds at 60fps
 
-  constructor(scene: ISceneWithItemDrops, config: { x: number, y: number }) {
+  constructor(scene: SceneWithItemDrops, config: { x: number, y: number }) {
     super(scene, { x: config.x, y: config.y, type: 'pickup' as EntityType, subtype: 'heart' });
   }
 

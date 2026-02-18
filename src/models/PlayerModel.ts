@@ -1,25 +1,17 @@
-import { ActorModel, Direction, IActorState, IdleState, KnockbackState } from './ActorModel.js';
+import { ActorModel, Direction, ActorState, IdleState, KnockbackState, AttackState } from './ActorModel.js';
 import { RoomModel } from './RoomModel.js';
 import { ITEM_CONFIG, WEAPON_CONFIG } from '../config.js';
-import { ISceneWithItemDrops } from './EntityModel.js';
 import { MathZeldaEvent } from '../Event.js';
 import { EntitySubtype, EntityType, ValidSubtype } from '../EntityType.js';
+import { ActionType } from '../actions/ActorAction.js';
+import { EventBus } from '../EventBus.js';
 
-export class AttackState implements IActorState {
-  private timer: number;
-  constructor(duration: number) {
-    this.timer = Date.now() + duration;
-  }
-  enter(actor: ActorModel) { }
-  update(actor: ActorModel, room: RoomModel, inputDir: Direction | null) {
-    if (Date.now() > this.timer) {
-      actor.changeState(new IdleState());
-    }
-  }
-  getAnimKey(actor: ActorModel) {
-    return `${actor.getEntityId()}_attack`;
-  }
-}
+const defaultConfig = {
+  currentHp: 6,
+  maxHp: 6,
+  speed: 0.5,
+  subtype: EntitySubtype.LINK
+};
 
 export class PlayerModel extends ActorModel {
   public inputDir: Direction | null = null;
@@ -28,16 +20,8 @@ export class PlayerModel extends ActorModel {
   public currentWeapon: string;
   public currentItem: string;
 
-  constructor(scene: ISceneWithItemDrops, config: { x: number, y: number, subtype: ValidSubtype<EntityType.PLAYER> }) {
-    super(scene, {
-      x: config.x,
-      y: config.y,
-      type: EntityType.PLAYER,
-      subtype: config.subtype,
-      currentHp: 6,
-      maxHp: 6,
-      speed: .5
-    });
+  constructor(config: { x: number, y: number, subtype: ValidSubtype<EntityType.PLAYER> }) {
+    super({type: EntityType.PLAYER, ...config, ...defaultConfig});
 
     this.weapons = [WEAPON_CONFIG.names[0]];
     this.items = [...ITEM_CONFIG.names];
@@ -55,17 +39,35 @@ export class PlayerModel extends ActorModel {
     super.hp = value;
 
     if(oldHp !== this.hp) {
-      this.scene.events.emit(MathZeldaEvent.PLAYER_HP_CHANGED, { hp: this.hp, player: this });
+      EventBus.emit(MathZeldaEvent.PLAYER_HP_CHANGED);
     }
   }
 
   ai(room: RoomModel): void {
-    this.process(this.inputDir, room);
+    if (this.nextAction()) return;
+
+    if (this.inputDir) {
+      // Calculate target based on small step for continuous movement feel, or grid size
+      // Using 16px step for now
+      let tx = this.x;
+      let ty = this.y;
+      const step = 16; 
+      
+      if (this.inputDir === Direction.left) tx -= step;
+      else if (this.inputDir === Direction.right) tx += step;
+      else if (this.inputDir === Direction.up) ty -= step;
+      else if (this.inputDir === Direction.down) ty += step;
+
+      this.queueAction({
+        type: ActionType.MOVE,
+        data: { x: tx, y: ty }
+      });
+    }
   }
 
   public takeDamage(amount: number, srcX: number, srcY: number): boolean {
     if (super.takeDamage(amount, srcX, srcY)) {
-      this.scene.events.emit(MathZeldaEvent.PLAYER_DIED);
+      EventBus.emit(MathZeldaEvent.PLAYER_DIED);
       return true;
     }
     return false;
@@ -78,10 +80,14 @@ export class PlayerModel extends ActorModel {
     return this.state instanceof AttackState;
   }
 
-  attack(duration: number): void {
+  attack(): void {
     if (this.state instanceof AttackState) return;
     if (this.state instanceof KnockbackState) return;
-    this.changeState(new AttackState(duration));
+    
+    this.queueAction({
+      type: ActionType.ATTACK,
+      data: { direction: this.currentDir }
+    });
   }
 
   getAttackValue(): number {

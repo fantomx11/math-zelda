@@ -1,12 +1,12 @@
 import { PlayerModel } from './PlayerModel.js';
-import { EntityConfig, EntityModel, ISceneWithItemDrops } from './EntityModel.js';
+import { EntityConfig, EntityModel, SceneWithItemDrops } from './EntityModel.js';
 
  /** Represents an item on the ground that can be picked up.
  */
 export class PickupModel extends EntityModel {
   pickedUp: boolean = false;
 
-  constructor(scene: ISceneWithItemDrops, config: EntityConfig) {
+  constructor(scene: SceneWithItemDrops, config: EntityConfig) {
     super(scene, config);
     this.subtype = config.subtype as any;
   }

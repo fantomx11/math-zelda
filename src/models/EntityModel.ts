@@ -2,8 +2,8 @@ import { EntitySubtype, EntityType, ValidSubtype } from "../EntityType";
 
 const gridSize = 8;
 
-export interface ISceneWithItemDrops extends Phaser.Scene {
-  spawnPickup(item: EntityModel): void;
+export interface SceneWithItemDrops extends Phaser.Scene {
+  spawnPickup(pickup: any): void;
 }
 
 export interface EntityConfig {
@@ -22,13 +22,28 @@ export type DefaultConfig<T> = {
  */
 export abstract class EntityModel {
   //#region Properties
+
   private _x: number;
   private _y: number;
   private _type: EntityType;
   private _subtype: EntitySubtype;
-  private _scene: ISceneWithItemDrops;
+  private _scene: SceneWithItemDrops;
 
-  abstract readonly alpha: number;
+  //#endregion
+
+  //#region Abstract Definitions
+
+  /**
+   * Called when another entity touches this entity.
+   * @param other The other entity that touched this entity.
+   */
+  abstract onTouch(other: EntityModel): void;
+
+  /**
+   * returns true if the entity is still active, false if it should be removed
+   */
+  abstract tick(): boolean;
+
   //#endregion
 
   //#region Constructor
@@ -36,8 +51,8 @@ export abstract class EntityModel {
    * @param scene The Phaser scene instance.
    * @param config Configuration for entity initialization.
    */
-  constructor(scene: ISceneWithItemDrops, config: EntityConfig) {
-    const { x, y, type, subtype, gridSize } = {...config, ...defaultConfig};
+  constructor(scene: SceneWithItemDrops, config: EntityConfig) {
+    const { x, y, type, subtype } = config;
 
     this._x = x;
     this._y = y;
@@ -48,15 +63,15 @@ export abstract class EntityModel {
   //#endregion
 
   //#region Accessors
-  public isOnXGrid(): boolean {
+  public get isOnXGrid(): boolean {
     return this.x % gridSize === 0;
   }
 
-  public isOnYGrid(): boolean {
+  public get isOnYGrid(): boolean {
     return this.y % gridSize === 0;
   }
 
-  public isOnGrid(): boolean {
+  public get isOnGrid(): boolean {
     return this.isOnXGrid && this.isOnYGrid;
   }
 
@@ -67,20 +82,20 @@ export abstract class EntityModel {
   public get y(): number {
     return this._y;
   }
-  
+
   public get type(): EntityType {
     return this._type;
   }
-  
-  public get scene(): ISceneWithItemDrops {
+
+  public get scene(): SceneWithItemDrops {
     return this._scene;
   }
-  
+
   public get subtype(): EntitySubtype {
     return this._subtype;
   }
   //#endregion
-  
+
   //#region Mutators
 
   protected set x(value: number) {
@@ -95,7 +110,7 @@ export abstract class EntityModel {
     this._type = value;
   }
 
-  protected set scene(value: ISceneWithItemDrops) {
+  protected set scene(value: SceneWithItemDrops) {
     this._scene = value;
   }
 
@@ -106,11 +121,6 @@ export abstract class EntityModel {
   //#endregion
 
   //#region Methods
-  /**
-   * Called when another entity touches this entity.
-   * @param other The other entity that touched this entity.
-   */
-  abstract onTouch(other: EntityModel): void;
 
   /** Snaps the X coordinate to the grid. */
   public snapToGridX(): void {
@@ -128,7 +138,5 @@ export abstract class EntityModel {
     this.snapToGridY();
   }
 
-  // returns true if the entity is still active, false if it should be removed
-  abstract tick(): boolean;
   //#endregion
 }

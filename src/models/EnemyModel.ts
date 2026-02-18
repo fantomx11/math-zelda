@@ -1,10 +1,11 @@
-import { ActorConfig, ActorModel, ActorSpecificConfig, Direction, IActorState, KnockbackState, MoveState } from './ActorModel.js';
-import { DefaultConfig, EntityModel, ISceneWithItemDrops } from './EntityModel.js';
+import { ActorConfig, ActorModel, ActorSpecificConfig, Direction, ActorState, IdleState, MoveState, KnockbackState } from './ActorModel.js';
+import { DefaultConfig, EntityModel, SceneWithItemDrops } from './EntityModel.js';
 import { HeartPickupModel } from './HeartPickupModel.js';
 import { PlayerModel } from './PlayerModel.js';
 import { RoomModel } from './RoomModel.js';
 import { MathZeldaEvent } from '../Event.js';
 import { EntitySubtype, EntityType, ValidSubtype } from '../EntityType.js';
+import { ActionType } from '../actions/ActorAction.js';
 
 
 /**
@@ -23,21 +24,6 @@ type EnemySpecificConfig = ({
 
 export type EnemyConfig = ActorConfig & EnemySpecificConfig;
 
-interface EnemyDef {
-  defaultConfig: DefaultConfig<ActorSpecificConfig>;
-  states: StateDefinition;
-  ai: (that: EnemyModel, room: RoomModel) => void;
-}
-
-const ENEMY_DEFS: { [key in ValidSubtype<EntityType.ENEMY>]?: EnemyDef } = {
-  [EntitySubtype.MOBLIN]: {
-    defaultConfig: { currentHp: 2, speed: .25 },
-    states: {
-      [ActorStateType.IDLE]: IdleState
-    }
-  }
-};
-
 /**
  * Base class for enemies with basic AI.
  */
@@ -47,7 +33,7 @@ export class EnemyModel extends ActorModel {
   public mathProblem: { a: number, b: number, answer: number };
   public color: string;
 
-  constructor(scene: ISceneWithItemDrops, config: EnemyConfig) {
+  constructor(scene: SceneWithItemDrops, config: EnemyConfig) {
     super(scene, config);
 
     const {color, level, mathProblem } = config;
@@ -63,40 +49,15 @@ export class EnemyModel extends ActorModel {
     this.color = color;
   }
 
-  public get baseAnimKey() {
-    return `${EntityType.ENEMY}_${this.subtype}_${this.color}`;
-  }
-
-  public changeState(newState: IActorState): void {
-
-    if (newState instanceof MoveState) {
-      this.rest();
-    } else {
-      this.aiTimer = 0;
-    }
-
-    super.changeState(newState);
-  }
-
-  private rest() {
-    this.aiTimer = 30 + Math.floor(Math.random() * 30);
-  }
 
   /**
    * Executes AI logic for movement.
    * @param room The room model.
    */
   ai(room: RoomModel): void {
-    if (this.state instanceof KnockbackState) {
-      this.process(null, room);
-      return;
-    }
+    if (this.nextAction()) return; // Already has action
 
-    // If currently moving, continue that movement
-    if (this.state instanceof MoveState) {
-      this.process(null, room);
-      return;
-    }
+    if (this.state === KnockbackState) return;
 
     // If waiting, count down
     if (this.aiTimer > 0) {
@@ -107,15 +68,33 @@ export class EnemyModel extends ActorModel {
     // Pick a random direction
     const dirs: Direction[] = [Direction.up, Direction.down, Direction.left, Direction.right];
     const pick = dirs[Math.floor(Math.random() * dirs.length)];
-    this.process(pick, room);
+    
+    // Calculate target based on grid size (32)
+    let tx = this.x;
+    let ty = this.y;
+    const dist = 32;
+    
+    if (pick === Direction.left) tx -= dist;
+    else if (pick === Direction.right) tx += dist;
+    else if (pick === Direction.up) ty -= dist;
+    else if (pick === Direction.down) ty += dist;
+
+    // Queue the move action
+    this.queueAction({
+      type: ActionType.MOVE,
+      data: { x: tx, y: ty }
+    });
+
+    // Rest after moving
+    this.aiTimer = 60 + Math.floor(Math.random() * 30);
   }
 
   /**
    * Handles monster-specific death logic, like dropping items.
    * @param scene The scene context.
    */
-  onDeath(scene: ISceneWithItemDrops): void {
-    scene.events.emit(MathZeldaEvent.MONSTER_DIED, { monster: this });
+  onDeath(scene: SceneWithItemDrops): void {
+    scene.events.emit(MathZeldaEvent.ENTITY_CULLED, { monster: this });
     if (Math.random() < 0.25) {
       scene.spawnPickup(new HeartPickupModel(scene, { x: this.x, y: this.y }));
     }

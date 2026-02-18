@@ -91,7 +91,7 @@ export class DungeonScene extends Phaser.Scene {
       if (dir) this.inputStack = this.inputStack.filter(d => d !== dir);
     });
 
-    this.events.on(MathZeldaEvent.MONSTER_DIED, () => {
+    this.events.on(MathZeldaEvent.ENTITY_CULLED, () => {
       if (this.entityManager.count("enemy") === 0) this.handleRoomClear();
     });
 
