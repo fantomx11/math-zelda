@@ -6,8 +6,9 @@ import { PickupModel } from "./models/PickupModel";
 export enum MathZeldaEvent {
   GAME_PAUSED = "game_paused",
   GAME_RESUMED = "game_resumed",
+  LEVEL_CHANGED = "level_changed",
   ROOM_CHANGED = "room_changed",
-  
+
   PLAYER_HP_CHANGED = "player_hp_changed",
   PLAYER_DIED = "player_died",
   
@@ -49,7 +50,8 @@ export type EventPayloads = {
   [MathZeldaEvent.GAME_PAUSED]: void;
   [MathZeldaEvent.GAME_RESUMED]: void;
   [MathZeldaEvent.ROOM_CHANGED]: void;
-
+  [MathZeldaEvent.LEVEL_CHANGED]: void;
+]
   [MathZeldaEvent.PLAYER_HP_CHANGED]: void;
   [MathZeldaEvent.PLAYER_DIED]: never;
 

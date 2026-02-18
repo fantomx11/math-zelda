@@ -1,10 +1,17 @@
+enum GridCellType {
+  Normal = 'normal',
+  Start = 'start',
+  Boss = 'boss',
+  Item = 'item'
+}
+
 interface GridCell {
   north: boolean;
   south: boolean;
   east: boolean;
   west: boolean;
   visited: boolean;
-  type: 'normal' | 'start' | 'boss' | 'item';
+  type: GridCellType;
   cleared?: boolean;
   itemCollected?: boolean;
 }
@@ -18,11 +25,9 @@ interface Point {
  * Generates a random maze layout.
  */
 export class MazeGenerator {
-  public size: number;
   public grid: GridCell[][];
 
-  constructor(size: number = 4) {
-    this.size = size;
+  constructor() {
     this.grid = [];
     this.reset();
   }
@@ -30,11 +35,11 @@ export class MazeGenerator {
   /**
    * Resets the grid to an initial unvisited state.
    */
-  reset(): void {
-    this.grid = Array.from({ length: this.size }, () => 
-      Array.from({ length: this.size }, () => ({
+  reset(size: number = 4): void {
+    this.grid = Array.from({ length: size }, () =>
+      Array.from({ length: size }, () => ({
         north: false, south: false, east: false, west: false,
-        visited: false, type: 'normal'
+        visited: false, type: GridCellType.Normal
       }))
     );
   }
@@ -44,15 +49,15 @@ export class MazeGenerator {
    * @param startPos The starting coordinates.
    * @returns The generated grid.
    */
-  generate(startPos: Point): GridCell[][] {
+  generate(startPos: Point, size: number = 4): GridCell[][] {
     let deadEnds: Point[] = [];
-    
+
     // Loop until we find a maze with enough dead ends
     while (deadEnds.length < 2) {
-      this.reset();
+      this.reset(size);
       const { x: sx, y: sy } = startPos;
-      this.grid[sy][sx].type = 'start';
-      
+      this.grid[sy][sx].type = GridCellType.Start;
+
       this.carve(sx, sy);
       deadEnds = this.getDeadEnds(sx, sy);
     }
@@ -62,9 +67,9 @@ export class MazeGenerator {
     const boss = deadEnds.pop()!;
     const item = deadEnds.pop()!;
 
-    this.grid[boss.y][boss.x].type = 'boss';
-    this.grid[item.y][item.x].type = 'item';
-    
+    this.grid[boss.y][boss.x].type = GridCellType.Boss;
+    this.grid[item.y][item.x].type = GridCellType.Item;
+
     return this.grid;
   }
 
@@ -77,14 +82,14 @@ export class MazeGenerator {
     this.grid[cy][cx].visited = true;
     const directions = [
       { x: 0, y: -1, wall: 'north', opp: 'south' },
-      { x: 0, y: 1,  wall: 'south', opp: 'north' },
-      { x: 1, y: 0,  wall: 'east',  opp: 'west'  },
-      { x: -1, y: 0, wall: 'west',  opp: 'east'  }
+      { x: 0, y: 1, wall: 'south', opp: 'north' },
+      { x: 1, y: 0, wall: 'east', opp: 'west' },
+      { x: -1, y: 0, wall: 'west', opp: 'east' }
     ].sort(() => Math.random() - 0.5);
 
     for (let { x, y, wall, opp } of directions) {
       let nx = cx + x, ny = cy + y;
-      if (nx >= 0 && nx < this.size && ny >= 0 && ny < this.size && !this.grid[ny][nx].visited) {
+      if (nx >= 0 && nx < this.grid.length && ny >= 0 && ny < this.grid[nx].length && !this.grid[ny][nx].visited) {
         (this.grid[cy][cx] as any)[wall] = true;
         (this.grid[ny][nx] as any)[opp] = true;
         this.carve(nx, ny);
@@ -100,12 +105,12 @@ export class MazeGenerator {
    */
   private getDeadEnds(startX: number, startY: number): Point[] {
     const ends: Point[] = [];
-    for (let y = 0; y < this.size; y++) {
-      for (let x = 0; x < this.size; x++) {
+    for (let x = 0; x < this.grid.length; x++) {
+      for (let y = 0; y < this.grid[x].length; y++) {
         const r = this.grid[y][x];
         // Count open walls
         const exits = [r.north, r.south, r.east, r.west].filter(v => v).length;
-        
+
         // A dead end has 1 exit and isn't where we started
         if (exits === 1 && !(x === startX && y === startY)) {
           ends.push({ x, y });

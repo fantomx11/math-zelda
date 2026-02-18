@@ -1,7 +1,9 @@
 import { RoomModel } from './RoomModel';
-import { DefaultConfig, EntityConfig, EntityModel, SceneWithItemDrops } from './EntityModel.js';
+import { DefaultConfig, EntityConfig, EntityModel } from './EntityModel.js';
 import { MathZeldaEvent } from '../Event';
 import { QueuedAction } from '../actions/ActorAction';
+import { EventBus } from '../EventBus';
+import { gameState } from '../GameState';
 
 //#region Types and Interfaces
 export enum Direction {
@@ -19,7 +21,7 @@ export enum ActorStateType {
   DEAD
 }
 
-export type StateDefinition = {
+export type StateDefinitions = {
   [K in ActorStateType]: ActorState
 }
 
@@ -28,20 +30,26 @@ export type StateDefinition = {
  */
 export interface ActorState {
   enter(actor: ActorModel): void;
-  update(actor: ActorModel, room: RoomModel): void;
+  update(actor: ActorModel): void;
   exit(actor: ActorModel): void;
 }
 
-/**
- * Configuration for Actor initialization.
- */
-export interface ActorSpecificConfig {
+interface ActorOptionalConfig {
   currentHp?: number;
   maxHp?: number;
   speed?: number;
 }
 
-const defaultConfig: DefaultConfig<ActorSpecificConfig> = {
+interface ActorRequiredConfig {
+  stateDefinitions: StateDefinitions;
+}
+
+/**
+ * Configuration for Actor initialization.
+ */
+export type ActorSpecificConfig = ActorOptionalConfig & ActorRequiredConfig;
+
+const defaultConfig: ActorOptionalConfig = {
   currentHp: 1,
   maxHp: 1,
   speed: 0.5
@@ -59,13 +67,11 @@ export const IdleState: ActorState = {
   enter(actor: ActorModel) {
     actor.snapToGrid();
   },
-  update(actor: ActorModel, room: RoomModel) {  
+  update(actor: ActorModel) {  
     // No movement, just wait for input
   },
   exit(actor: ActorModel) { }
 };
-
-
 
 /**
  * State representing an Actor moving through the grid.
@@ -79,7 +85,7 @@ export const MoveState: ActorState = {
       actor.snapToGridX();
     } 
   },
-  update(actor: ActorModel, room: RoomModel) {
+  update(actor: ActorModel) {
 
 
     let dx = 0, dy = 0;
@@ -89,9 +95,11 @@ export const MoveState: ActorState = {
     if (actor.currentDir === Direction.down) dy = actor.speed;  
 
     const nextX = actor.x + dx;
-
     const nextY = actor.y + dy;
-    if (actor.canPass(nextX, nextY, room)) {
+
+
+
+    if (actor.canPass(nextX, nextY, gameState.currentRoom)) {
       actor.moveTo(nextX, nextY); 
     } else {
       actor.snapToGrid();
@@ -102,55 +110,6 @@ export const MoveState: ActorState = {
   }
 }; 
 
-export class MoveState implements ActorState {
-  private remainingStep: number = 0;
-
-  enter(actor: ActorModel) {
-    this.remainingStep = actor.gridSize;
-    // Perpendicular snap (Lane alignment)
-    if (actor.currentDir === Direction.left || actor.currentDir === Direction.right) {
-      actor.snapToGridY();
-    } else {
-      actor.snapToGridX();
-    }
-  }
-
-  update(actor: ActorModel, room: RoomModel, inputDir: Direction | null) {
-    let dx = 0, dy = 0;
-    if (actor.currentDir === Direction.left) dx = -actor.speed;
-    if (actor.currentDir === Direction.right) dx = actor.speed;
-    if (actor.currentDir === Direction.up) dy = -actor.speed;
-    if (actor.currentDir === Direction.down) dy = actor.speed;
-
-    const nextX = actor.x + dx;
-    const nextY = actor.y + dy;
-
-    if (actor.canPass(nextX, nextY, room)) {
-      actor.moveTo(nextX, nextY);
-      this.remainingStep -= actor.speed;
-    } else {
-      this.remainingStep = 0;
-    }
-
-    if (this.remainingStep <= 0) {
-      actor.snapToGrid();
-
-      if (inputDir === actor.currentDir) {
-        this.remainingStep = actor.gridSize;
-      } else if (inputDir) {
-        actor.currentDir = inputDir;
-        actor.changeState(new MoveState());
-      } else {
-        actor.changeState(new IdleState());
-      }
-    }
-  }
-
-  getAnimKey(actor: ActorModel) {
-    return `${actor.baseAnimKey}_${actor.currentDir}_walk`;
-  }
-}
-
 /**
  * State representing an Actor being pushed back by damage.
  */
@@ -160,11 +119,11 @@ export const KnockbackState: ActorState = {
     data.dist = 32;
     const dx = data.srcX - actor.x;
     const dy = data.srcY - actor.y;
-    if (Math.abs(dx) > Math.abs(dy)) actor.currentDir = dx > 0 ? Direction.right : Direction.left;
-    else actor.currentDir = dy > 0 ? Direction.down : Direction.up;
+    if (Math.abs(dx) > Math.abs(dy)) actor.face(dx > 0 ? Direction.right : Direction.left);
+    else actor.face(dy > 0 ? Direction.down : Direction.up);
   },
 
-  update(actor: ActorModel, room: RoomModel) {
+  update(actor: ActorModel) {
     const data = actor.stateData as { dist: number };
     const speed = 2;
     let dx = 0, dy = 0;
@@ -176,18 +135,17 @@ export const KnockbackState: ActorState = {
     const nextX = actor.x + dx;
     const nextY = actor.y + dy;
 
-    if (actor.canPass(nextX, nextY, room)) {
+    if (actor.canPass(nextX, nextY, gameState.currentRoom)) {
       actor.moveTo(nextX, nextY);
     }
 
     data.dist -= speed;
     if (data.dist <= 0) {
-      actor.changeState(new IdleState());
+      actor.changeState(IdleState);
     }
   },
 
   exit(actor: ActorModel) { actor.stateData = null; },
-  getAnimKey(actor: ActorModel) { return `${actor.baseAnimKey}_${actor.currentDir}_idle`; }
 };
 //#endregion
 
@@ -196,6 +154,7 @@ export const KnockbackState: ActorState = {
  */
 export abstract class ActorModel extends EntityModel {
   //#region Properties
+
   private _speed: number;
   private _currentDir: Direction;
   private _hp: number;
@@ -204,33 +163,37 @@ export abstract class ActorModel extends EntityModel {
   private _state: ActorState;
   public stateData: any = null;
   private _actionQueue: QueuedAction[] = [];
+  private _stateDefinitions: StateDefinitions;
 
-  abstract readonly isAlive: boolean;
   //#endregion
 
   //#region Constructor
-  constructor(scene: SceneWithItemDrops, config: ActorConfig) {
-    super(scene, config);
+  constructor(config: ActorConfig) {
+    super(config);
 
-    const { currentHp, maxHp, speed}: DefaultConfig<ActorSpecificConfig> = {...config, ...defaultConfig};
+    const { currentHp, maxHp, speed, stateDefinitions}: Required<ActorConfig> = <Required<ActorConfig>>{...config, ...defaultConfig};
 
+    this._stateDefinitions = stateDefinitions;
     this._currentDir = Direction.down;
     this._hp = currentHp || maxHp;
     this._maxHp = maxHp;
     this._speed = speed;
     this._invincibleTimer = 0;
-    this._state = new IdleState();
+    this._state = this._stateDefinitions[ActorStateType.IDLE];
   }
+
   //#endregion
 
   //#region Accessors
+
   public get speed(): number { return this._speed; }
   public get currentDir(): Direction { return this._currentDir; }
   public get hp(): number { return this._hp; }
-  public get state(): IActorState { return this._state; }
-  public get isDead(): boolean { return this._hp <= 0; }
+  public get state(): ActorState { return this._state; }
+  public get isAlive(): boolean { return this._hp > 0; }
   public get isInvincible(): boolean { return this._invincibleTimer > Date.now(); }
   public get alpha(): number { return this.isInvincible ? 0.5 : 1; }
+
   //#endregion
 
   //#region Mutators
@@ -243,7 +206,7 @@ export abstract class ActorModel extends EntityModel {
     value = Math.max(0, Math.min(this._maxHp, value));
     if (value === this._hp) return;
     this._hp = value;
-    this.scene.events.emit(MathZeldaEvent.ACTOR_HP_CHANGED, { hp: this._hp, actor: this });
+    EventBus.emit(MathZeldaEvent.ACTOR_HP_CHANGED, { hp: this._hp, actor: this });
   }
   
   protected set state(value: ActorState) { this._state = value; }
@@ -264,7 +227,7 @@ export abstract class ActorModel extends EntityModel {
   }
 
   public finishAction(): void {
-    this._actionQueue.shift(1);
+    this._actionQueue.shift();
   }
 
   public changeState(newState: ActorState): void {
@@ -306,17 +269,21 @@ export abstract class ActorModel extends EntityModel {
     this.stateData = { srcX, srcY };
     this.changeState(KnockbackState);
 
-    this.scene.events.emit(MathZeldaEvent.ACTOR_HURT, { amount: this._hp, actor: this });
+    EventBus.emit(MathZeldaEvent.ACTOR_HURT, { amount: this._hp, actor: this });
 
-    return this.isDead;
+    return true;
   }
 
   public tick(): boolean {
     this.ai();
 
-    this.state.update(this);    
-  ]
+    this.state.update(this);
+
     return this.isAlive;
+  }
+
+  public face(direction: Direction): void {
+    this.currentDir = direction;
   }
 
   public abstract ai(): void;
@@ -349,7 +316,6 @@ export abstract class ActorModel extends EntityModel {
   public getEntityId(): string {
     return `${this.subtype}_${this.currentDir}`;
   }
-
-  public onDeath(scene: SceneWithItemDrops): void { }
+  
   //#endregion
 }

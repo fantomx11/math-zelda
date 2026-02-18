@@ -2,10 +2,6 @@ import { EntitySubtype, EntityType, ValidSubtype } from "../EntityType";
 
 const gridSize = 8;
 
-export interface SceneWithItemDrops extends Phaser.Scene {
-  spawnPickup(pickup: any): void;
-}
-
 export interface EntityConfig {
   x: number;
   y: number;
@@ -27,7 +23,6 @@ export abstract class EntityModel {
   private _y: number;
   private _type: EntityType;
   private _subtype: EntitySubtype;
-  private _scene: SceneWithItemDrops;
 
   //#endregion
 
@@ -51,12 +46,11 @@ export abstract class EntityModel {
    * @param scene The Phaser scene instance.
    * @param config Configuration for entity initialization.
    */
-  constructor(scene: SceneWithItemDrops, config: EntityConfig) {
+  constructor(config: EntityConfig) {
     const { x, y, type, subtype } = config;
 
     this._x = x;
     this._y = y;
-    this._scene = scene;
     this._type = type;
     this._subtype = subtype as EntitySubtype;
   }
@@ -87,10 +81,6 @@ export abstract class EntityModel {
     return this._type;
   }
 
-  public get scene(): SceneWithItemDrops {
-    return this._scene;
-  }
-
   public get subtype(): EntitySubtype {
     return this._subtype;
   }
@@ -108,10 +98,6 @@ export abstract class EntityModel {
 
   protected set type(value: EntityType) {
     this._type = value;
-  }
-
-  protected set scene(value: SceneWithItemDrops) {
-    this._scene = value;
   }
 
   protected set subtype(value: EntitySubtype) {

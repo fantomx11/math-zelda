@@ -15,18 +15,24 @@ const defaultConfig = {
 
 export class PlayerModel extends ActorModel {
   public inputDir: Direction | null = null;
-  public weapons: string[] = [];
-  public items: string[] = [];
+  public inventoryLevel: number;
   public currentWeapon: string;
   public currentItem: string;
 
   constructor(config: { x: number, y: number, subtype: ValidSubtype<EntityType.PLAYER> }) {
     super({type: EntityType.PLAYER, ...config, ...defaultConfig});
 
-    this.weapons = [WEAPON_CONFIG.names[0]];
-    this.items = [...ITEM_CONFIG.names];
+    this.inventoryLevel= 1;
     this.currentWeapon = this.weapons[0];
     this.currentItem = this.items[0];
+  }
+
+  public get weapons() {
+    return [...WEAPON_CONFIG.names].slice(0, this.inventoryLevel);
+  }
+
+  public get items() {
+    return [...ITEM_CONFIG.names];
   }
 
   public get hp(): number {
