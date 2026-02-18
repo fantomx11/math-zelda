@@ -1,4 +1,4 @@
-import { EntitySubtype } from "./EntityType";
+import { EntitySubtype, ItemType, WeaponType } from "./Enums";
 
 /**
  * Configuration for animation frames.
@@ -7,7 +7,7 @@ export interface AnimFrameConfig {
   start: number;
   length: number;
   rate: number;
-  repeat: number;
+  repeat: boolean;
 }
 
 /**
@@ -45,31 +45,64 @@ export const SKIN_CONFIG = {
     [EntitySubtype.Yuga]: {"name": "Yuga", x: 256, y: 432}
   },
   anims: {
-    down_walk: { start: 0, length: 2, rate: 8, repeat: -1 },
-    up_walk: { start: 2, length: 2, rate: 8, repeat: -1 },
-    left_walk: { start: 4, length: 2, rate: 8, repeat: -1 },
-    right_walk: { start: 6, length: 2, rate: 8, repeat: -1 },
-    down_attack: { start: 8, length: 1, rate: 10, repeat: 0 },
-    up_attack: { start: 9, length: 1, rate: 10, repeat: 0 },
-    left_attack: { start: 10, length: 1, rate: 10, repeat: 0 },
-    right_attack: { start: 11, length: 1, rate: 10, repeat: 0 },
-    down_idle: { start: 0, length: 1, rate: 8, repeat: -1 },
-    up_idle: { start: 2, length: 1, rate: 8, repeat: -1 },
-    left_idle: { start: 4, length: 1, rate: 8, repeat: -1 },
-    right_idle: { start: 6, length: 1, rate: 8, repeat: -1 },
-    item_1h: { start: 12, length: 1, rate: 10, repeat: 0 },
-    item_2h: { start: 13, length: 1, rate: 10, repeat: 0 }
+    down_walk: { start: 0, length: 2, rate: 8, repeat: true },
+    up_walk: { start: 2, length: 2, rate: 8, repeat: true },
+    left_walk: { start: 4, length: 2, rate: 8, repeat: true },
+    right_walk: { start: 6, length: 2, rate: 8, repeat: true },
+    down_attack: { start: 8, length: 1, rate: 10, repeat: false },
+    up_attack: { start: 9, length: 1, rate: 10, repeat: false },
+    left_attack: { start: 10, length: 1, rate: 10, repeat: false },
+    right_attack: { start: 11, length: 1, rate: 10, repeat: false },
+    down_idle: { start: 0, length: 1, rate: 8, repeat: true },
+    up_idle: { start: 2, length: 1, rate: 8, repeat: true },
+    left_idle: { start: 4, length: 1, rate: 8, repeat: true },
+    right_idle: { start: 6, length: 1, rate: 8, repeat: true },
+    item_1h: { start: 12, length: 1, rate: 10, repeat: false },
+    item_2h: { start: 13, length: 1, rate: 10, repeat: false }
   } as Record<string, AnimFrameConfig>
 };
 
 /**
  * Configuration for weapons.
  */
-export const WEAPON_CONFIG = {
-  startPos: { x: 64, y: 416 },
-  frameSize: { w: 16, h: 16 },
-  names: ["Rapier", "Biggoron's Sword", "Sword of Demise", "Hammer", "Shadow Scimitar", "Protector Sword", "Dragon Spear", "Cutlass of Light", "Demon Sword", "Master Sword"]
+export const WeaponConfig = {
+  [WeaponType.Rapier]:         {name: "Rapier", x: 64, y: 416, w: 16, h: 16, length: 1},
+  [WeaponType.BiggoronsSword]: {name: "Biggoron's Sword", x: 80, y: 416, w: 16, h: 16, length: 1},
+  [WeaponType.SwordOfDemise]: {name: "Sword of Demise", x: 80, y: 416, w: 16, h: 16, length: 1},
+  [WeaponType.Hammer]: {name: "Hammer", x: 80, y: 416, w: 16, h: 16, length: 1},
+  [WeaponType.ShadowScimitar]: {name: "Shadow Scimitar", x: 80, y: 416, w: 16, h: 16, length: 1},
+  [WeaponType.ProtectorSword]: {name: "Protector Sword", x: 80, y: 416, w: 16, h: 16, length: 1},
+  [WeaponType.DragonSpear]: {name: "Dragon Spear", x: 80, y: 416, w: 16, h: 16, length: 1},
+  [WeaponType.CutlassOfLight]: {name: "Cutlass of Light", x: 80, y: 416, w: 16, h: 16, length: 1},
+  [WeaponType.DemonSword]: {name: "Demon Sword", x: 80, y: 416, w: 16, h: 16, length: 1},
+  [WeaponType.MasterSword]: {name: "Master Sword", x: 80, y: 416, w: 16, h: 16, length: 1},
 };
+
+export const WeaponLevels: WeaponType[] = [
+  WeaponType.Rapier,
+  WeaponType.BiggoronsSword,
+  WeaponType.SwordOfDemise,
+  WeaponType.Hammer,
+  WeaponType.ShadowScimitar,
+  WeaponType.ProtectorSword,
+  WeaponType.DragonSpear,
+  WeaponType.CutlassOfLight,
+  WeaponType.DemonSword,
+  WeaponType.MasterSword
+];
+
+export const ItemLevels: ItemType[] = [
+  ItemType.Nothing,
+  ItemType.BlueRing,
+  ItemType.RedRing,
+  ItemType.BlueBracelet,
+  ItemType.RedBracelet,
+  ItemType.MoonPearl,
+  ItemType.FirePearl,
+  ItemType.BombosMedallion,
+  ItemType.EtherMedallion,
+  ItemType.QuakeMedallion
+];
 
 /**
  * Configuration for items.

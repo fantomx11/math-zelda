@@ -11,6 +11,7 @@ class GameState {
   private _rooms: RoomModel[][] = [];
   private _entities: EntityModel[] = [];
   private _currentLevel: number = 1;
+  private _itemFound: boolean = false;
 
   constructor() {
     this._currentRoomX = 0;
@@ -25,11 +26,28 @@ class GameState {
     }
   }
 
+  public get currentLevel(): number {
+    return this._currentLevel;
+  }
+
+  public get itemFound(): boolean {
+    return this._itemFound;
+  }
+
+  private set currentLevel(level: number) {
+    this._currentLevel = level;
+  }
+
+
+
   startLevel(level = 1) {
     this._currentLevel = level;
     this._rooms = RoomModel.generateLevel(level);
     this._currentRoomX = 0;
     this._currentRoomY = 0;
+    this._itemFound = false;
+    
+    EventBus.emit(MathZeldaEvent.LevelChanged);
     EventBus.emit(MathZeldaEvent.RoomChanged);
   }
 

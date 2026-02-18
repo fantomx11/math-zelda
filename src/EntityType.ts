@@ -1,3 +1,5 @@
+import { EntitySubtype, EntityType } from "./Enums";
+
 /**
  * Maps every Subtype back to its parent EntityType.
  * This is your single source of truth.

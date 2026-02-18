@@ -1,7 +1,7 @@
 import { RoomModel } from '../models/RoomModel.js';
 import { Direction, IdleState } from '../models/ActorModel.js';
 import { PlayerModel } from '../models/PlayerModel.js';
-import { SKIN_CONFIG, WEAPON_CONFIG, ITEM_CONFIG } from '../config.js';
+import { SKIN_CONFIG, WeaponConfig, ITEM_CONFIG } from '../config.js';
 import { GameMode } from '../modes/GameMode.js';
 import { TitleMode } from '../modes/TitleMode.js';
 import { DungeonManager } from '../managers/DungeonManager.js';
@@ -227,10 +227,10 @@ export class DungeonScene extends Phaser.Scene {
    * Registers weapon frames from the sprite sheet.
    */
   loadWeapons(): void {
-    const { x: startX, y: startY } = WEAPON_CONFIG.startPos;
-    const { w, h } = WEAPON_CONFIG.frameSize;
+    const { x: startX, y: startY } = WeaponConfig.startPos;
+    const { w, h } = WeaponConfig.frameSize;
 
-    WEAPON_CONFIG.names.forEach((name, i) => {
+    WeaponConfig.names.forEach((name, i) => {
       this.textures.get('master_sheet').add(
         `weapon_${name}`,
         0,

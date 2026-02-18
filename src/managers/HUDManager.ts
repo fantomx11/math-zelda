@@ -1,7 +1,7 @@
 import { DungeonManager } from './DungeonManager.js';
 import { PlayerModel } from '../models/PlayerModel.js';
 import { EnemyModel } from '../models/EnemyModel.js';
-import { WEAPON_CONFIG, ITEM_CONFIG } from '../config.js';
+import { WeaponConfig, ITEM_CONFIG } from '../config.js';
 import { MathZeldaEvent } from '../Event.js';
 
 export class HUDManager {
@@ -41,7 +41,7 @@ export class HUDManager {
 
     // Weapons
     this.pauseContainer.add(scene.add.bitmapText(16, 8, 'arcade', 'WEAPONS (Tens)').setTint(0xd82800));
-    WEAPON_CONFIG.names.forEach((name, i) => {
+    WeaponConfig.names.forEach((name, i) => {
         const x = 16 + (i % 5) * 24;
         const y = 24 + Math.floor(i / 5) * 24;
         const sprite = scene.add.sprite(x, y, 'master_sheet', `weapon_${name}`);
@@ -155,7 +155,7 @@ export class HUDManager {
   updatePauseScreen(player: PlayerModel, enemies: EnemyModel[]): void {
     // Update Weapon visibility
     this.weaponSprites.forEach((sprite, i) => {
-        const name = WEAPON_CONFIG.names[i];
+        const name = WeaponConfig.names[i];
         sprite.setVisible(player.weapons.includes(name));
     });
 
@@ -215,8 +215,8 @@ export class HUDManager {
     const idx = this.cursorIndex.x + (this.cursorIndex.y % 2) * 5;
     if (this.cursorIndex.y < 2) {
         // Weapon
-        if (idx < WEAPON_CONFIG.names.length && player.weapons.includes(WEAPON_CONFIG.names[idx])) {
-            player.currentWeapon = WEAPON_CONFIG.names[idx];
+        if (idx < WeaponConfig.names.length && player.weapons.includes(WeaponConfig.names[idx])) {
+            player.currentWeapon = WeaponConfig.names[idx];
         }
     } else {
         // Item
@@ -227,7 +227,7 @@ export class HUDManager {
   }
 
   updateSelectionBoxes(player: PlayerModel): void {
-    const weaponIdx = WEAPON_CONFIG.names.indexOf(player.currentWeapon);
+    const weaponIdx = WeaponConfig.names.indexOf(player.currentWeapon);
     if (weaponIdx !== -1) {
         const x = 16 + (weaponIdx % 5) * 24;
         const y = 24 + Math.floor(weaponIdx / 5) * 24;

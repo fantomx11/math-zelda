@@ -1,8 +1,8 @@
 export enum WallType {
-    Open = 'open',
-    Solid = 'solid',
-    Locked = 'locked',
-    Shut = 'shut'
+  Open = 'open',
+  Solid = 'solid',
+  Locked = 'locked',
+  Shut = 'shut'
 }
 
 export enum MathZeldaEvent {
@@ -13,7 +13,7 @@ export enum MathZeldaEvent {
 
   PlayerHpChanged = "player_hp_changed",
   PlayerDied = "player_died",
-  
+
   ActorHurt = "actor_hurt",
   ActorHpChanged = "actor_hp_changed",
   ActorAttack = "actor_attack",
@@ -70,13 +70,39 @@ export enum EntitySubtype {
   ToonLink = "toon_link",
   Tetra = "tetra",
   KingDaphnes = "king_daphnes",
-  Medli = "medli", 
-  Marin = "marin", 
-  ToonZelda = "toon_zelda", 
+  Medli = "medli",
+  Marin = "marin",
+  ToonZelda = "toon_zelda",
   Yuga = "yuga",
 
   Gleeok = "gleeok",
   Gohma = "gohma",
   Manhandla = "manhandla",
   Dodongo = "dodongo"
+}
+
+export enum WeaponType {
+  Rapier = "Rapier",
+  BiggoronsSword = "Biggoron's Sword",
+  SwordOfDemise = "Sword of Demise",
+  Hammer = "Hammer",
+  ShadowScimitar = "Shadow Scimitar",
+  ProtectorSword = "Protector Sword",
+  DragonSpear = "Dragon Spear",
+  CutlassOfLight = "Cutlass of Light",
+  DemonSword = "Demon Sword",
+  MasterSword = "Master Sword",
+}
+
+export enum ItemType {
+  Nothing = "Nothing",
+  BlueRing = "Blue Ring",
+  RedRing = "Red Ring",
+  BlueBracelet = "Blue Bracelet",
+  RedBracelet = "Red Bracelet",
+  MoonPearl = "Moon Pearl",
+  FirePearl = "Fire Pearl",
+  BombosMedallion = "Bombos Medallion",
+  EtherMedallion = "Ether Medallion",
+  QuakeMedallion = "Quake Medallion"
 }
