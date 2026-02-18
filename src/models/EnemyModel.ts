@@ -1,5 +1,5 @@
 import { ActorConfig, ActorModel, ActorSpecificConfig, Direction, ActorState, IdleState, MoveState, KnockbackState } from './ActorModel.js';
-import { DefaultConfig, EntityModel, SceneWithItemDrops } from './EntityModel.js';
+import { EntityModel } from './EntityModel.js';
 import { HeartPickupModel } from './HeartPickupModel.js';
 import { PlayerModel } from './PlayerModel.js';
 import { RoomModel } from './RoomModel.js';
@@ -12,7 +12,9 @@ import { ActionType } from '../actions/ActorAction.js';
  * Configuration for Monster initialization.
  */
 
-type EnemySpecificConfig = ({
+type EnemyOptionalConfig = { }
+
+type EnemyRequiredConfig = ({
   level: number;
   mathProblem?: never;
 } | {
@@ -22,19 +24,25 @@ type EnemySpecificConfig = ({
   color: string
 };
 
+type EnemySpecificConfig = EnemyOptionalConfig & EnemyRequiredConfig;
+
 export type EnemyConfig = ActorConfig & EnemySpecificConfig;
+
+const defaultConfig = {
+  type: EntityType.Enemy,
+};
 
 /**
  * Base class for enemies with basic AI.
  */
 export class EnemyModel extends ActorModel {
-  public static DAMAGE_AMOUNT: number = 1;
+  public static DamageAmount: number = 1;
   public aiTimer: number;
   public mathProblem: { a: number, b: number, answer: number };
   public color: string;
 
-  constructor(scene: SceneWithItemDrops, config: EnemyConfig) {
-    super(scene, config);
+  constructor(config: EnemyConfig) {
+    super({...config, type: EntityType.Enemy});
 
     const {color, level, mathProblem } = config;
 
@@ -102,7 +110,7 @@ export class EnemyModel extends ActorModel {
 
   onTouch(other: EntityModel): void {
     if (other.type === 'player') {
-      (other as PlayerModel).takeDamage(EnemyModel.DAMAGE_AMOUNT, this.x, this.y);
+      (other as PlayerModel).takeDamage(EnemyModel.DamageAmount, this.x, this.y);
     }
   }
 

@@ -131,7 +131,7 @@ export class DungeonScene extends Phaser.Scene {
     this.dungeonManager = new DungeonManager(4);
     this.entityManager = new EntityManager(this, this.dungeonOffset);
 
-    ENTITY_TYPE_MAP[EntityType.PLAYER].forEach(skin => this.loadSkin(skin));
+    ENTITY_TYPE_MAP[EntityType.Player].forEach(skin => this.loadSkin(skin));
 
     this.loadEnemies();
     this.createEnemyAnims();
@@ -186,7 +186,7 @@ export class DungeonScene extends Phaser.Scene {
    * Loads sprite frames and animations for a specific character skin.
    * @param skinName The name of the skin to load.
    */
-  loadSkin(subtype: ValidSubtype<EntityType.PLAYER>): void {
+  loadSkin(subtype: ValidSubtype<EntityType.Player>): void {
     const skinDefinition = SKIN_CONFIG.skinDefs[subtype];
 
     const { x: startX, y: startY } = SKIN_CONFIG.startPos;
@@ -200,7 +200,7 @@ export class DungeonScene extends Phaser.Scene {
     for (const [animKey, config] of Object.entries(SKIN_CONFIG.anims)) {
       const frames: Phaser.Types.Animations.AnimationFrame[] = [];
       for (let i = 0; i < config.length; i++) {
-        const frameName = `${EntityType.PLAYER}_${subtype}_${animKey}_${i}`;
+        const frameName = `${EntityType.Player}_${subtype}_${animKey}_${i}`;
 
         // Add frame to texture manager
         this.textures.get('master_sheet').add(
@@ -210,7 +210,7 @@ export class DungeonScene extends Phaser.Scene {
         frames.push({ key: 'master_sheet', frame: frameName });
       }
 
-      let finalAnimKey = `${EntityType.PLAYER}_${subtype}_${animKey}`
+      let finalAnimKey = `${EntityType.Player}_${subtype}_${animKey}`
 
       // Remove existing if switching skins
       this.anims.remove(finalAnimKey);

@@ -1,83 +1,59 @@
-export enum EntityType {
-  PLAYER = "player",
-  ENEMY = "enemy",
-  PICKUP = "pickup",
-  PROJECTILE = "projectile",
-  OTHER = "other"
-}
+/**
+ * Maps every Subtype back to its parent EntityType.
+ * This is your single source of truth.
+ */
+export const SUBTYPE_TO_TYPE: Record<EntitySubtype, EntityType> = {
+  // Players
+  [EntitySubtype.Link]: EntityType.Player,
+  [EntitySubtype.Zelda]: EntityType.Player,
+  [EntitySubtype.Sheik]: EntityType.Player,
+  [EntitySubtype.Impa]: EntityType.Player,
+  [EntitySubtype.Ganondorf]: EntityType.Player,
+  [EntitySubtype.Darunia]: EntityType.Player,
+  [EntitySubtype.Ruto]: EntityType.Player,
+  [EntitySubtype.Agitha]: EntityType.Player,
+  [EntitySubtype.Midna]: EntityType.Player,
+  [EntitySubtype.Fi]: EntityType.Player,
+  [EntitySubtype.Ghirarim]: EntityType.Player,
+  [EntitySubtype.Zant]: EntityType.Player,
+  [EntitySubtype.Lana]: EntityType.Player,
+  [EntitySubtype.Cia]: EntityType.Player,
+  [EntitySubtype.Vlga]: EntityType.Player,
+  [EntitySubtype.Wizzro]: EntityType.Player,
+  [EntitySubtype.TwiliMidna]: EntityType.Player,
+  [EntitySubtype.KidLink]: EntityType.Player,
+  [EntitySubtype.Tingle]: EntityType.Player,
+  [EntitySubtype.Linkle]: EntityType.Player,
+  [EntitySubtype.SkullKid]: EntityType.Player,
+  [EntitySubtype.ToonLink]: EntityType.Player,
+  [EntitySubtype.Tetra]: EntityType.Player,
+  [EntitySubtype.KingDaphnes]: EntityType.Player,
+  [EntitySubtype.Medli]: EntityType.Player,
+  [EntitySubtype.Marin]: EntityType.Player,
+  [EntitySubtype.ToonZelda]: EntityType.Player,
+  [EntitySubtype.Yuga]: EntityType.Player,
 
-export enum EntitySubtype {
   // Enemies
-  MOBLIN = "moblin",
-  SKELETON = "skeleton",
-  BAT = "bat",
-  SLIME = "slime",
-  BOSS = "boss",
+  [EntitySubtype.Moblin]: EntityType.Enemy,
+  [EntitySubtype.Keese]: EntityType.Enemy,
+  [EntitySubtype.Gel]: EntityType.Enemy,
+  [EntitySubtype.Zol]: EntityType.Enemy,
+  [EntitySubtype.Goriya]: EntityType.Enemy,
+  [EntitySubtype.Darknut]: EntityType.Enemy,
+  [EntitySubtype.Octorok]: EntityType.Enemy,
+  [EntitySubtype.Lynel]: EntityType.Enemy,
+
+  // Bosses
+  [EntitySubtype.Gleeok]: EntityType.Boss,
+  [EntitySubtype.Gohma]: EntityType.Boss,
+  [EntitySubtype.Manhandla]: EntityType.Boss,
+  [EntitySubtype.Dodongo]: EntityType.Boss,
 
   // Pickups
-  HEART = "heart",
-  RUPEE = "rupee",
-  WEAPON_UPGRADE = "weapon_upgrade",
-  ITEM_UPGRADE = "item_upgrade",
+  [EntitySubtype.Heart]: EntityType.Pickup,
+  [EntitySubtype.Weapon]: EntityType.Pickup,
+};
 
-  // Projectiles
-  ARROW = "arrow",
-  FIREBALL = "fireball",
-
-  //Players
-  LINK = "link",
-  ZELDA = "zelda",
-  SHEIK = "sheik",
-  IMPA = "impa",
-  GANONDORF = "ganondorf",
-  DARUNIA = "darunia",
-  RUTO = "ruto",
-  AGITHA = "agitha",
-  MIDNA = "midna",
-  FI = "fi",
-  GHIRARIM = "ghirarim",
-  ZANT = "zant",
-  LANA = "lana",
-  CIA = "cia",
-  VOLGA = "volga",
-  WIZZRO = "wizzro",
-  TWILI_MIDNA = "twili_midna",
-  KID_LINK = "kid_link",
-  TINGLE = "tingle",
-  LINKLE = "linkle",
-  SKULL_KID = "skull_kid",
-  TOON_LINK = "toon_link",
-  TETRA = "tetra",
-  KING_DAPHNES = "king_daphnes",
-  MEDLI = "medli", 
-  MARIN = "marin", 
-  TOON_ZELDA = "toon_zelda", 
-  YUGA = "yuga",
-  
-  
-  OTHER = "other"
-}
-
-/**
- * Defines the valid mapping of Subtypes to Types.
- */
-export const ENTITY_TYPE_MAP = {
-  [EntityType.PLAYER]: [EntitySubtype.LINK, EntitySubtype.ZELDA, EntitySubtype.SHEIK, EntitySubtype.IMPA, EntitySubtype.GANONDORF, EntitySubtype.DARUNIA, EntitySubtype.RUTO, EntitySubtype.AGITHA, EntitySubtype.MIDNA, EntitySubtype.FI, EntitySubtype.GHIRARIM, EntitySubtype.ZANT, EntitySubtype.LANA, EntitySubtype.CIA, EntitySubtype.VOLGA, EntitySubtype.WIZZRO, EntitySubtype.TWILI_MIDNA, EntitySubtype.KID_LINK, EntitySubtype.TINGLE, EntitySubtype.LINKLE, EntitySubtype.SKULL_KID, EntitySubtype.TOON_LINK, EntitySubtype.TETRA, EntitySubtype.KING_DAPHNES, EntitySubtype.MEDLI, EntitySubtype.MARIN, EntitySubtype.TOON_ZELDA, EntitySubtype.YUGA],
-  [EntityType.ENEMY]: [EntitySubtype.MOBLIN, EntitySubtype.SKELETON, EntitySubtype.BAT, EntitySubtype.SLIME, EntitySubtype.BOSS],
-  [EntityType.PICKUP]: [EntitySubtype.HEART, EntitySubtype.RUPEE, EntitySubtype.WEAPON_UPGRADE, EntitySubtype.ITEM_UPGRADE],
-  [EntityType.PROJECTILE]: [EntitySubtype.ARROW, EntitySubtype.FIREBALL],
-  [EntityType.OTHER]: [EntitySubtype.OTHER]
-} as const;
-
-/**
- * Type helper to get valid subtypes for a specific type.
- * Usage: const subtype: ValidSubtype<EntityType.ENEMY> = EntitySubtype.GOBLIN;
- */
-export type ValidSubtype<T extends EntityType> = (typeof ENTITY_TYPE_MAP)[T][number];
-
-/**
- * Utility to check validity at runtime.
- */
-export function isValidSubtype(type: EntityType, subtype: EntitySubtype): boolean {
-  return (ENTITY_TYPE_MAP[type] as readonly EntitySubtype[]).includes(subtype);
+function isType(subtype: EntitySubtype, targetType: EntityType): boolean {
+  return SUBTYPE_TO_TYPE[subtype] === targetType;
 }

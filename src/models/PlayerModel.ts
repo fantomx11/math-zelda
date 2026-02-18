@@ -10,7 +10,7 @@ const defaultConfig = {
   currentHp: 6,
   maxHp: 6,
   speed: 0.5,
-  subtype: EntitySubtype.LINK
+  subtype: EntitySubtype.Link
 };
 
 export class PlayerModel extends ActorModel {
@@ -19,8 +19,8 @@ export class PlayerModel extends ActorModel {
   public currentWeapon: string;
   public currentItem: string;
 
-  constructor(config: { x: number, y: number, subtype: ValidSubtype<EntityType.PLAYER> }) {
-    super({type: EntityType.PLAYER, ...config, ...defaultConfig});
+  constructor(config: { x: number, y: number, subtype: ValidSubtype<EntityType.Player> }) {
+    super({type: EntityType.Player, ...config, ...defaultConfig});
 
     this.inventoryLevel= 1;
     this.currentWeapon = this.weapons[0];
