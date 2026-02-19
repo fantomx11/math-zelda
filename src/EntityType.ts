@@ -4,7 +4,7 @@ import { EntitySubtype, EntityType } from "./Enums";
  * Maps every Subtype back to its parent EntityType.
  * This is your single source of truth.
  */
-export const SUBTYPE_TO_TYPE: Record<EntitySubtype, EntityType> = {
+export const SubtypeToType: Record<EntitySubtype, EntityType> = {
   // Players
   [EntitySubtype.Link]: EntityType.Player,
   [EntitySubtype.Zelda]: EntityType.Player,
@@ -54,8 +54,8 @@ export const SUBTYPE_TO_TYPE: Record<EntitySubtype, EntityType> = {
   // Pickups
   [EntitySubtype.Heart]: EntityType.Pickup,
   [EntitySubtype.Weapon]: EntityType.Pickup,
-};
+} as const;
 
-function isType(subtype: EntitySubtype, targetType: EntityType): boolean {
-  return SUBTYPE_TO_TYPE[subtype] === targetType;
+export function isType(subtype: EntitySubtype, targetType: EntityType): boolean {
+  return SubtypeToType[subtype] === targetType;
 }

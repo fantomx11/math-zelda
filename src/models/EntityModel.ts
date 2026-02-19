@@ -1,11 +1,11 @@
-import { EntitySubtype, EntityType, ValidSubtype } from "../EntityType";
+import { SubtypeToType } from "../EntityType";
+import { EntitySubtype, EntityType } from "../Enums";
 
 const gridSize = 8;
 
 export interface EntityConfig {
   x: number;
   y: number;
-  type: EntityType;
   subtype: EntitySubtype;
 }
 
@@ -21,7 +21,6 @@ export abstract class EntityModel {
 
   private _x: number;
   private _y: number;
-  private _type: EntityType;
   private _subtype: EntitySubtype;
 
   //#endregion
@@ -47,12 +46,11 @@ export abstract class EntityModel {
    * @param config Configuration for entity initialization.
    */
   constructor(config: EntityConfig) {
-    const { x, y, type, subtype } = config;
+    const { x, y, subtype } = config;
 
     this._x = x;
     this._y = y;
-    this._type = type;
-    this._subtype = subtype as EntitySubtype;
+    this._subtype = subtype;
   }
   //#endregion
 
@@ -78,8 +76,8 @@ export abstract class EntityModel {
   }
 
   public get type(): EntityType {
-    return this._type;
-  }
+    return SubtypeToType[this._subtype];
+  } 
 
   public get subtype(): EntitySubtype {
     return this._subtype;

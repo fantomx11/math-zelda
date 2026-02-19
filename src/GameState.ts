@@ -4,6 +4,7 @@ import { PickupModel } from './models/PickupModel';
 import { EntityModel } from './models/EntityModel';
 import { EventBus } from './EventBus';
 import { MathZeldaEvent } from './Event';
+import { HeartPickupModel } from './models/HeartPickupModel';
 
 class GameState {
   private _currentRoomX: number;
@@ -37,8 +38,6 @@ class GameState {
   private set currentLevel(level: number) {
     this._currentLevel = level;
   }
-
-
 
   startLevel(level = 1) {
     this._currentLevel = level;
@@ -80,6 +79,11 @@ class GameState {
       EventBus.emit(MathZeldaEvent.EntityCulled, { entity });
     });
   }
+
+  public spawnEntity(entity: EntityModel) {
+    this._entities.push(entity);
+  }
+
 }
 
 export const gameState = new GameState();

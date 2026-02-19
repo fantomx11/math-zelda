@@ -4,6 +4,7 @@ import { MathZeldaEvent } from '../Event';
 import { QueuedAction } from '../actions/ActorAction';
 import { EventBus } from '../EventBus';
 import { gameState } from '../GameState';
+import { EntityType } from '../Enums';
 
 //#region Types and Interfaces
 export enum Direction {
@@ -67,7 +68,7 @@ export const IdleState: ActorState = {
   enter(actor: ActorModel) {
     actor.snapToGrid();
   },
-  update(actor: ActorModel) {  
+  update(actor: ActorModel) {
     // No movement, just wait for input
   },
   exit(actor: ActorModel) { }
@@ -79,11 +80,11 @@ export const IdleState: ActorState = {
 export const MoveState: ActorState = {
   enter(actor: ActorModel) {
     // Perpendicular snap (Lane alignment)
-    if (actor.currentDir === Direction.left || actor.currentDir === Direction.right) {   
+    if (actor.currentDir === Direction.left || actor.currentDir === Direction.right) {
       actor.snapToGridY();
     } else {
       actor.snapToGridX();
-    } 
+    }
   },
   update(actor: ActorModel) {
 
@@ -92,7 +93,7 @@ export const MoveState: ActorState = {
     if (actor.currentDir === Direction.left) dx = -actor.speed;
     if (actor.currentDir === Direction.right) dx = actor.speed;
     if (actor.currentDir === Direction.up) dy = -actor.speed;
-    if (actor.currentDir === Direction.down) dy = actor.speed;  
+    if (actor.currentDir === Direction.down) dy = actor.speed;
 
     const nextX = actor.x + dx;
     const nextY = actor.y + dy;
@@ -100,7 +101,7 @@ export const MoveState: ActorState = {
 
 
     if (actor.canPass(nextX, nextY, gameState.currentRoom)) {
-      actor.moveTo(nextX, nextY); 
+      actor.moveTo(nextX, nextY);
     } else {
       actor.snapToGrid();
     }
@@ -108,7 +109,7 @@ export const MoveState: ActorState = {
   exit(actor: ActorModel) {
     actor.snapToGrid();
   }
-}; 
+};
 
 /**
  * State representing an Actor being pushed back by damage.
@@ -171,7 +172,7 @@ export abstract class ActorModel extends EntityModel {
   constructor(config: ActorConfig) {
     super(config);
 
-    const { currentHp, maxHp, speed, stateDefinitions}: Required<ActorConfig> = <Required<ActorConfig>>{...config, ...defaultConfig};
+    const { currentHp, maxHp, speed, stateDefinitions }: Required<ActorConfig> = <Required<ActorConfig>>{ ...config, ...defaultConfig };
 
     this._stateDefinitions = stateDefinitions;
     this._currentDir = Direction.down;
@@ -197,20 +198,20 @@ export abstract class ActorModel extends EntityModel {
   //#endregion
 
   //#region Mutators
-  
+
   protected set speed(value: number) { this._speed = value; }
 
   protected set currentDir(value: Direction) { this._currentDir = value; }
-  
+
   protected set hp(value: number) {
     value = Math.max(0, Math.min(this._maxHp, value));
     if (value === this._hp) return;
     this._hp = value;
     EventBus.emit(MathZeldaEvent.ActorHpChanged, { hp: this._hp, actor: this });
   }
-  
+
   protected set state(value: ActorState) { this._state = value; }
-  
+
   //#endregion
 
   //#region Methods
@@ -231,31 +232,11 @@ export abstract class ActorModel extends EntityModel {
   }
 
   public changeState(newState: ActorState): void {
-    if(this.state) {
+    if (this.state) {
       this.state.exit(this);
     }
     this.state = newState;
     this.state.enter(this);
-  }
-
-  public canPass(nx: number, ny: number, room: RoomModel): boolean {
-    const cs = room.cornerSize;
-    const fs = room.floorSize;
-    const limit = cs + fs;
-    const margin = 8;
-
-    const inFloorX = nx >= cs + margin && nx <= limit - margin;
-    const inFloorY = ny >= cs + margin && ny <= limit - margin;
-    if (inFloorX && inFloorY) return true;
-
-    const mid = 128;
-    const dw = 0;
-    if (room.wallTypes.n === 'open' && nx >= mid - dw && nx <= mid + dw && ny < cs + margin) return true;
-    if (room.wallTypes.s === 'open' && nx >= mid - dw && nx <= mid + dw && ny > limit - margin) return true;
-    if (room.wallTypes.w === 'open' && ny >= mid - dw && ny <= mid + dw && nx < cs + margin) return true;
-    if (room.wallTypes.e === 'open' && ny >= mid - dw && ny <= mid + dw && nx > limit - margin) return true;
-
-    return false;
   }
 
   public takeDamage(amount: number, srcX: number, srcY: number): boolean {
@@ -286,26 +267,26 @@ export abstract class ActorModel extends EntityModel {
     this.currentDir = direction;
   }
 
-  public abstract ai(): void;
-
   public move(direction: Direction, room: RoomModel): void {
     this.face(direction);
-    if(direction == Direction.up || direction == Direction.down) {
+    if (direction == Direction.up || direction == Direction.down) {
       this.snapToGridX();
-      this.y += direction == Direction.up ? -this.speed : this.speed;
+      const newY = this.y + (direction == Direction.up ? -this.speed : this.speed);
+      if (gameState.currentRoom.isPassable(this.x, newY, this.type === EntityType.Player)) {
+        this.y += direction == Direction.up ? -this.speed : this.speed;
+      }
     } else {
       this.snapToGridY();
-      this.x += direction == Direction.left ? -this.speed : this.speed;
+      
+      const newX = this.x + (direction == Direction.left ? -this.speed : this.speed);
+      if (gameState.currentRoom.isPassable(newX, this.y, this.type === EntityType.Player)) {
+        this.x += direction == Direction.left ? -this.speed : this.speed;
+      }
     }
   }
-
+  
+  public abstract ai(): void;
   abstract attack(direction: Direction, room: RoomModel): void;
-
-  /** Updates the actor's position. */
-  public moveTo(x: number, y: number): void {
-    this.x = x;
-    this.y = y;
-  }
 
   public heal(amount: number): boolean {
     if (amount <= 0 || this.hp >= this._maxHp) return false;
@@ -316,6 +297,6 @@ export abstract class ActorModel extends EntityModel {
   public getEntityId(): string {
     return `${this.subtype}_${this.currentDir}`;
   }
-  
+
   //#endregion
 }
