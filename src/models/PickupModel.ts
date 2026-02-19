@@ -1,5 +1,5 @@
 import { PlayerModel } from './PlayerModel.js';
-import { EntityConfig, EntityModel, SceneWithItemDrops } from './EntityModel.js';
+import { EntityConfig, EntityModel } from './EntityModel.js';
 
  /** Represents an item on the ground that can be picked up.
  */
@@ -10,6 +10,11 @@ export class PickupModel extends EntityModel {
     super(scene, config);
     this.subtype = config.subtype as any;
   }
+
+  public get isBlocking(): boolean {
+    return false;
+  }
+
 
   /**
    * Pickups don't have AI.

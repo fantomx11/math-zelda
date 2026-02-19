@@ -1,7 +1,6 @@
 import { SubtypeToType } from "../EntityType";
 import { EntitySubtype, EntityType } from "../Enums";
-
-const gridSize = 8;
+import { gameState } from "../GameState";
 
 export interface EntityConfig {
   x: number;
@@ -32,6 +31,7 @@ export abstract class EntityModel {
    * @param other The other entity that touched this entity.
    */
   abstract onTouch(other: EntityModel): void;
+  abstract readonly isBlocking: boolean;
 
   /**
    * returns true if the entity is still active, false if it should be removed
@@ -56,11 +56,11 @@ export abstract class EntityModel {
 
   //#region Accessors
   public get isOnXGrid(): boolean {
-    return this.x % gridSize === 0;
+    return this.x % gameState.currentRoom.gridSize === 0;
   }
 
   public get isOnYGrid(): boolean {
-    return this.y % gridSize === 0;
+    return this.y % gameState.currentRoom.gridSize === 0;
   }
 
   public get isOnGrid(): boolean {
@@ -108,11 +108,13 @@ export abstract class EntityModel {
 
   /** Snaps the X coordinate to the grid. */
   public snapToGridX(): void {
+    const gridSize = gameState.currentRoom.gridSize;
     this.x = Math.round(this.x / gridSize) * gridSize;
   }
 
   /** Snaps the Y coordinate to the grid. */
   public snapToGridY(): void {
+    const gridSize = gameState.currentRoom.gridSize;
     this.y = Math.round(this.y / gridSize) * gridSize;
   }
 

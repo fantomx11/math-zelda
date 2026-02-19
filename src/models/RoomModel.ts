@@ -1,5 +1,7 @@
-import { WallType } from "../Enums";
+import { MathZeldaEvent, WallType } from "../Enums";
+import { EventBus } from "../EventBus";
 import { gameState } from "../GameState";
+import { EntityModel } from "./EntityModel";
 
 interface WallTypes {
   n: WallType;
@@ -27,13 +29,35 @@ export class RoomModel {
   public wallTypes: { n: WallType; s: WallType; e: WallType; w: WallType };
   public mathProblem: { a: number, b: number, answer: number };
   
+  public entities: EntityModel[] = [];
+  public readonly gridSize: number = 8;
 
   constructor(config: RoomConfig) {
     const { wallTypes, mathProblem = generateMathProblem() } = config;
 
     this.mathProblem = { ...mathProblem };
     this.wallTypes = { ...wallTypes };
+
+
   }
+
+  public addEntity(entity: EntityModel): void {
+    this.entities.push(entity);
+
+    EventBus.on(MathZeldaEvent.EntityCulled, ({entity: culledEntity}) => {
+      if (culledEntity === entity) {
+        this.removeEntity(entity);
+      }
+    });
+  }
+
+  public removeEntity(entity: EntityModel): void {
+    const index = this.entities.indexOf(entity);
+    if (index !== -1) {
+      this.entities.splice(index, 1);
+    }
+  }
+
 
   /**
    * Checks if a sprite's center (x, y) is within bounds.
@@ -43,6 +67,31 @@ export class RoomModel {
    * @param h Sprite height (default 16)
    */
   public isPassable(x: number, y: number, isPlayer = false, w: number = 16, h: number = 16): boolean {
+    const gridSize = this.gridSize;
+    for (const entity of this.entities) {
+      if (!entity.isBlocking) continue;
+      
+      const occupiedX: number[] = [];
+      if (entity.isOnXGrid) {
+        occupiedX.push(entity.x);
+      } else {
+        occupiedX.push(Math.floor(entity.x / gridSize) * gridSize);
+        occupiedX.push(Math.ceil(entity.x / gridSize) * gridSize);
+      }
+
+      const occupiedY: number[] = [];
+      if (entity.isOnYGrid) {
+        occupiedY.push(entity.y);
+      } else {
+        occupiedY.push(Math.floor(entity.y / gridSize) * gridSize);
+        occupiedY.push(Math.ceil(entity.y / gridSize) * gridSize);
+      }
+
+      if (occupiedX.includes(x) && occupiedY.includes(y)) {
+        return false;
+      }
+    }
+
     const wallSize = 32;
     const playableSize = 192;
     const roomMax = wallSize + playableSize; // 224
@@ -85,4 +134,6 @@ export class RoomModel {
       y <= (roomMax - halfH)
     );
   }
+
+  
 }

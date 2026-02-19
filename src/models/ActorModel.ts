@@ -194,6 +194,19 @@ export abstract class ActorModel extends EntityModel {
   public get isAlive(): boolean { return this._hp > 0; }
   public get isInvincible(): boolean { return this._invincibleTimer > Date.now(); }
   public get alpha(): number { return this.isInvincible ? 0.5 : 1; }
+  public get isBlocking(): boolean { return true; }
+
+  public get isOnXGrid(): boolean {
+    const gridSize = gameState.currentRoom.gridSize;
+    const nearest = Math.round(this.x / gridSize) * gridSize;
+    return Math.abs(this.x - nearest) <= this.speed;
+  }
+
+  public get isOnYGrid(): boolean {
+    const gridSize = gameState.currentRoom.gridSize;
+    const nearest = Math.round(this.y / gridSize) * gridSize;
+    return Math.abs(this.y - nearest) <= this.speed;
+  }
 
   //#endregion
 
@@ -268,19 +281,46 @@ export abstract class ActorModel extends EntityModel {
   }
 
   public move(direction: Direction, room: RoomModel): void {
-    this.face(direction);
-    if (direction == Direction.up || direction == Direction.down) {
-      this.snapToGridX();
-      const newY = this.y + (direction == Direction.up ? -this.speed : this.speed);
-      if (gameState.currentRoom.isPassable(this.x, newY, this.type === EntityType.Player)) {
-        this.y += direction == Direction.up ? -this.speed : this.speed;
+    const gridSize = room.gridSize;
+    const onGrid = this.isOnGrid;
+
+    if (onGrid) {
+      if (direction === this.currentDir) {
+        // Moving in the same direction, check if passable
+        let nextX = this.x;
+        let nextY = this.y;
+
+        if (direction === Direction.up) nextY -= gridSize;
+        else if (direction === Direction.down) nextY += gridSize;
+        else if (direction === Direction.left) nextX -= gridSize;
+        else if (direction === Direction.right) nextX += gridSize;
+
+        if (room.isPassable(nextX, nextY, this.type === EntityType.Player)) {
+          this.performMove(direction);
+        } else {
+          this.snapToGrid();
+        }
+      } else {
+        // Changing direction on grid, snap first
+        this.snapToGrid();
+        this.face(direction);
       }
     } else {
-      this.snapToGridY();
-      
-      const newX = this.x + (direction == Direction.left ? -this.speed : this.speed);
-      if (gameState.currentRoom.isPassable(newX, this.y, this.type === EntityType.Player)) {
-        this.x += direction == Direction.left ? -this.speed : this.speed;
+      // Not on grid
+      if (direction === this.currentDir) {
+        this.performMove(direction);
+      } else if (this.isOppositeDirection(direction)) {
+        this.face(direction);
+        this.performMove(direction);
+      } else {
+        // Perpendicular input off-grid, continue current movement
+        // Ensure we stay in lane
+        if (this.currentDir === Direction.up || this.currentDir === Direction.down) {
+          this.snapToGridX();
+        } else {
+          this.snapToGridY();
+        }
+        this.performMove(this.currentDir);
       }
     }
   }
@@ -296,6 +336,20 @@ export abstract class ActorModel extends EntityModel {
 
   public getEntityId(): string {
     return `${this.subtype}_${this.currentDir}`;
+  }
+
+  private isOppositeDirection(dir: Direction): boolean {
+    return (dir === Direction.up && this.currentDir === Direction.down) ||
+           (dir === Direction.down && this.currentDir === Direction.up) ||
+           (dir === Direction.left && this.currentDir === Direction.right) ||
+           (dir === Direction.right && this.currentDir === Direction.left);
+  }
+
+  private performMove(dir: Direction): void {
+    if (dir === Direction.up) this.y -= this.speed;
+    else if (dir === Direction.down) this.y += this.speed;
+    else if (dir === Direction.left) this.x -= this.speed;
+    else if (dir === Direction.right) this.x += this.speed;
   }
 
   //#endregion
