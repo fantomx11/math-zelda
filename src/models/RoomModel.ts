@@ -1,4 +1,4 @@
-import { MathZeldaEvent, WallType } from "../Enums";
+import { MathZeldaEvent, RoomType, WallType } from "../Enums";
 import { EventBus } from "../EventBus";
 import { gameState } from "../GameState";
 import { EntityModel } from "./EntityModel";
@@ -13,13 +13,44 @@ interface WallTypes {
 export interface RoomConfig {
   wallTypes: WallTypes;
   mathProblem?: { a: number, b: number, answer: number };
+  roomType?: RoomType;
 }
 
-function generateMathProblem(): { a: number, b: number, answer: number } {
-  const a = gameState.currentLevel;
+function generateMathProblem(level = gameState.currentLevel): { a: number, b: number, answer: number } {
+  const a = level;
   const b = Math.floor(Math.random() * 10);
   const answer = a * b;
   return { a, b, answer };
+}
+
+
+function generateBossMathProblem(level: number): { a: number, b: number, answer: number } {
+  // The tens digit is level + 1 (e.g., Level 1 -> Tens is 2, Level 2 -> Tens is 3)
+  const targetTens = level + 1;
+  const targetOnes = Math.floor(Math.random() * 10);
+  const answer = (targetTens * 10) + targetOnes;
+
+  // Attempt to find factor pairs (a * b = answer) for a multiplication problem
+  const factors: { a: number, b: number }[] = [];
+  
+  // We check up to the square root of the answer to find all integer factors
+  for (let i = 2; i <= Math.sqrt(answer); i++) {
+    if (answer % i === 0) {
+      factors.push({ a: i, b: answer / i });
+    }
+  }
+
+  if (factors.length > 0) {
+    // Randomly select one of the factor pairs discovered
+    const pair = factors[Math.floor(Math.random() * factors.length)];
+    // Randomly swap a and b for variety
+    return Math.random() > 0.5 
+      ? { a: pair.a, b: pair.b, answer } 
+      : { a: pair.b, b: pair.a, answer };
+  } else {
+    // Fallback if the target number is prime (e.g., 23, 31, 37)
+    return { a: 1, b: answer, answer };
+  }
 }
 
 /**
@@ -28,17 +59,25 @@ function generateMathProblem(): { a: number, b: number, answer: number } {
 export class RoomModel {
   public wallTypes: { n: WallType; s: WallType; e: WallType; w: WallType };
   public mathProblem: { a: number, b: number, answer: number };
+  public roomType: RoomType;
   
   public entities: EntityModel[] = [];
   public readonly gridSize: number = 8;
 
   constructor(config: RoomConfig) {
-    const { wallTypes, mathProblem = generateMathProblem() } = config;
+    const { wallTypes, mathProblem = generateMathProblem(), roomType = RoomType.Normal } = config;
 
     this.mathProblem = { ...mathProblem };
     this.wallTypes = { ...wallTypes };
+    this.roomType = roomType;
+  }
 
+  public generateMathProblem(level? : number): void {
+    this.mathProblem = generateMathProblem(level || gameState.currentLevel);
+  }
 
+  public generateBossMathProblem(level?: number): void {
+    this.mathProblem = generateBossMathProblem(level || gameState.currentLevel);
   }
 
   public addEntity(entity: EntityModel): void {

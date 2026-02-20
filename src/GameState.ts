@@ -5,6 +5,7 @@ import { EntityModel } from './models/EntityModel';
 import { EventBus } from './EventBus';
 import { MathZeldaEvent } from './Event';
 import { HeartPickupModel } from './models/HeartPickupModel';
+import { PlayerModel } from './models/PlayerModel';
 
 class GameState {
   private _currentRoomX: number;
@@ -13,6 +14,8 @@ class GameState {
   private _entities: EntityModel[] = [];
   private _currentLevel: number = 1;
   private _itemFound: boolean = false;
+
+  public player: PlayerModel;
 
   constructor() {
     this._currentRoomX = 0;
@@ -51,7 +54,7 @@ class GameState {
   }
 
   public moveToRoom(direction: Direction) {
-    const newRoom = this._currentRoom.getAdjacentRoom(direction);
+    const newRoom = this.currentRoom.getAdjacentRoom(direction);
     if (newRoom) {
       this._currentRoom = newRoom;
       EventBus.emit(MathZeldaEvent.RoomChanged, { room: newRoom });

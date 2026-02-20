@@ -2,10 +2,8 @@ import { ActorConfig, ActorModel, ActorSpecificConfig, Direction, ActorState, Id
 import { EntityModel } from './EntityModel.js';
 import { HeartPickupModel } from './HeartPickupModel.js';
 import { PlayerModel } from './PlayerModel.js';
-import { RoomModel } from './RoomModel.js';
 import { MathZeldaEvent } from '../Event.js';
 import { ActionType } from '../actions/ActorAction.js';
-import { EntityType } from '../Enums.js';
 import { EventBus } from '../EventBus.js';
 import { gameState } from '../GameState.js';
 
@@ -65,6 +63,14 @@ export class EnemyModel extends ActorModel {
       type: ActionType.WAIT,
       data: { duration: 60 + Math.floor(Math.random() * 30) }
     });
+  }
+
+  public takeDamage(amount: number, srcX: number, srcY: number): boolean {
+    if(gameState.currentRoom.mathProblem.answer === gameState.player.currentAttackValue) {
+      return super.takeDamage(amount, srcX, srcY);
+    } else {
+      return false;
+    }
   }
 
   /**

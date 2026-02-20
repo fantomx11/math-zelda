@@ -5,6 +5,13 @@ export enum WallType {
   Shut = 'shut'
 }
 
+export enum RoomType {
+  Normal = 'normal',
+  Boss = 'boss',
+  Item = 'item',
+  Start = 'start'
+}
+
 export enum MathZeldaEvent {
   GamePaused = "game_paused",
   GameResumed = "game_resumed",
