@@ -13,36 +13,36 @@ export interface AnimFrameConfig {
 /**
  * Configuration for the skin system.
  */
-export const SKIN_CONFIG = {
+export const SkinConfig = {
   skinDefs: {
-    [EntitySubtype.Link]: {"name": "Link", x: 256, y: 0},
-    [EntitySubtype.Zelda]: {"name": "Zelda", x: 256, y: 16},
-    [EntitySubtype.Sheik]: {"name": "Shiek", x: 256, y: 32},
-    [EntitySubtype.Impa]: {"name": "Impa", x: 256, y: 48},
-    [EntitySubtype.Ganondorf]: {"name": "Ganondorf", x: 256, y: 64},
-    [EntitySubtype.Darunia]: {"name": "Darunia", x: 256, y: 80},
-    [EntitySubtype.Ruto]: {"name": "Ruto", x: 256, y: 96},
-    [EntitySubtype.Agitha]: {"name": "Agitha", x: 256, y: 112},
-    [EntitySubtype.Midna]: {"name": "Midna", x: 256, y: 128},
-    [EntitySubtype.Fi]: {"name": "Fi", x: 256, y: 144},
-    [EntitySubtype.Ghirarim]: {"name": "Ghirarim", x: 256, y: 160},
-    [EntitySubtype.Zant]: {"name": "Zant", x: 256, y: 176},
-    [EntitySubtype.Lana]: {"name": "Lana", x: 256, y: 192},
-    [EntitySubtype.Cia]: {"name": "Cia", x: 256, y: 208},
-    [EntitySubtype.Vlga]: {"name": "Volga", x: 256, y: 224},
-    [EntitySubtype.Wizzro]: {"name": "Wizzro", x: 256, y: 240},
-    [EntitySubtype.TwiliMidna]: {"name": "Twili Midna", x: 256, y: 256},
-    [EntitySubtype.KidLink]: {"name": "Kid Link", x: 256, y: 272},
-    [EntitySubtype.Tingle]: {"name": "Tingle", x: 256, y: 288},
-    [EntitySubtype.Linkle]: {"name": "Linkle", x: 256, y: 304},
-    [EntitySubtype.SkullKid]: {"name": "Skull Kid", x: 256, y: 320},
-    [EntitySubtype.ToonLink]: {"name": "Toon Link", x: 256, y: 336},
-    [EntitySubtype.Tetra]: {"name": "Tetra", x: 256, y: 352},
-    [EntitySubtype.KingDaphnes]: {"name": "King Daphnes", x: 256, y: 368},
-    [EntitySubtype.Medli]: {"name": "Medli", x: 256, y: 384},
-    [EntitySubtype.Marin]: {"name": "Marin", x: 256, y: 400},
-    [EntitySubtype.ToonZelda]: {"name": "Toon Zelda", x: 256, y: 416},
-    [EntitySubtype.Yuga]: {"name": "Yuga", x: 256, y: 432}
+    [EntitySubtype.Link]: { "name": "Link", x: 256, y: 0 },
+    [EntitySubtype.Zelda]: { "name": "Zelda", x: 256, y: 16 },
+    [EntitySubtype.Sheik]: { "name": "Shiek", x: 256, y: 32 },
+    [EntitySubtype.Impa]: { "name": "Impa", x: 256, y: 48 },
+    [EntitySubtype.Ganondorf]: { "name": "Ganondorf", x: 256, y: 64 },
+    [EntitySubtype.Darunia]: { "name": "Darunia", x: 256, y: 80 },
+    [EntitySubtype.Ruto]: { "name": "Ruto", x: 256, y: 96 },
+    [EntitySubtype.Agitha]: { "name": "Agitha", x: 256, y: 112 },
+    [EntitySubtype.Midna]: { "name": "Midna", x: 256, y: 128 },
+    [EntitySubtype.Fi]: { "name": "Fi", x: 256, y: 144 },
+    [EntitySubtype.Ghirarim]: { "name": "Ghirarim", x: 256, y: 160 },
+    [EntitySubtype.Zant]: { "name": "Zant", x: 256, y: 176 },
+    [EntitySubtype.Lana]: { "name": "Lana", x: 256, y: 192 },
+    [EntitySubtype.Cia]: { "name": "Cia", x: 256, y: 208 },
+    [EntitySubtype.Vlga]: { "name": "Volga", x: 256, y: 224 },
+    [EntitySubtype.Wizzro]: { "name": "Wizzro", x: 256, y: 240 },
+    [EntitySubtype.TwiliMidna]: { "name": "Twili Midna", x: 256, y: 256 },
+    [EntitySubtype.KidLink]: { "name": "Kid Link", x: 256, y: 272 },
+    [EntitySubtype.Tingle]: { "name": "Tingle", x: 256, y: 288 },
+    [EntitySubtype.Linkle]: { "name": "Linkle", x: 256, y: 304 },
+    [EntitySubtype.SkullKid]: { "name": "Skull Kid", x: 256, y: 320 },
+    [EntitySubtype.ToonLink]: { "name": "Toon Link", x: 256, y: 336 },
+    [EntitySubtype.Tetra]: { "name": "Tetra", x: 256, y: 352 },
+    [EntitySubtype.KingDaphnes]: { "name": "King Daphnes", x: 256, y: 368 },
+    [EntitySubtype.Medli]: { "name": "Medli", x: 256, y: 384 },
+    [EntitySubtype.Marin]: { "name": "Marin", x: 256, y: 400 },
+    [EntitySubtype.ToonZelda]: { "name": "Toon Zelda", x: 256, y: 416 },
+    [EntitySubtype.Yuga]: { "name": "Yuga", x: 256, y: 432 }
   },
   anims: {
     down_walk: { start: 0, length: 2, rate: 8, repeat: true },
@@ -62,53 +62,70 @@ export const SKIN_CONFIG = {
   } as Record<string, AnimFrameConfig>
 };
 
+interface InventoryConfig<T> {
+  spriteDefs: Record<T, { name: string; x: number; y: number; w: number; h: number; length: number }>;
+  levels: T[];
+}
+
 /**
  * Configuration for weapons.
  */
-export const WeaponConfig = {
-  [WeaponType.Rapier]:         {name: "Rapier", x: 64, y: 416, w: 16, h: 16, length: 1},
-  [WeaponType.BiggoronsSword]: {name: "Biggoron's Sword", x: 80, y: 416, w: 16, h: 16, length: 1},
-  [WeaponType.SwordOfDemise]: {name: "Sword of Demise", x: 80, y: 416, w: 16, h: 16, length: 1},
-  [WeaponType.Hammer]: {name: "Hammer", x: 80, y: 416, w: 16, h: 16, length: 1},
-  [WeaponType.ShadowScimitar]: {name: "Shadow Scimitar", x: 80, y: 416, w: 16, h: 16, length: 1},
-  [WeaponType.ProtectorSword]: {name: "Protector Sword", x: 80, y: 416, w: 16, h: 16, length: 1},
-  [WeaponType.DragonSpear]: {name: "Dragon Spear", x: 80, y: 416, w: 16, h: 16, length: 1},
-  [WeaponType.CutlassOfLight]: {name: "Cutlass of Light", x: 80, y: 416, w: 16, h: 16, length: 1},
-  [WeaponType.DemonSword]: {name: "Demon Sword", x: 80, y: 416, w: 16, h: 16, length: 1},
-  [WeaponType.MasterSword]: {name: "Master Sword", x: 80, y: 416, w: 16, h: 16, length: 1},
+export const WeaponConfig: InventoryConfig<WeaponType> = {
+  spriteDefs: {
+    [WeaponType.Rapier]: { name: "Rapier", x: 64, y: 416, w: 16, h: 16, length: 1 },
+    [WeaponType.BiggoronsSword]: { name: "Biggoron's Sword", x: 80, y: 416, w: 16, h: 16, length: 1 },
+    [WeaponType.SwordOfDemise]: { name: "Sword of Demise", x: 80, y: 416, w: 16, h: 16, length: 1 },
+    [WeaponType.Hammer]: { name: "Hammer", x: 80, y: 416, w: 16, h: 16, length: 1 },
+    [WeaponType.ShadowScimitar]: { name: "Shadow Scimitar", x: 80, y: 416, w: 16, h: 16, length: 1 },
+    [WeaponType.ProtectorSword]: { name: "Protector Sword", x: 80, y: 416, w: 16, h: 16, length: 1 },
+    [WeaponType.DragonSpear]: { name: "Dragon Spear", x: 80, y: 416, w: 16, h: 16, length: 1 },
+    [WeaponType.CutlassOfLight]: { name: "Cutlass of Light", x: 80, y: 416, w: 16, h: 16, length: 1 },
+    [WeaponType.DemonSword]: { name: "Demon Sword", x: 80, y: 416, w: 16, h: 16, length: 1 },
+    [WeaponType.MasterSword]: { name: "Master Sword", x: 80, y: 416, w: 16, h: 16, length: 1 },
+  },
+  levels: [
+    WeaponType.Rapier,
+    WeaponType.BiggoronsSword,
+    WeaponType.SwordOfDemise,
+    WeaponType.Hammer,
+    WeaponType.ShadowScimitar,
+    WeaponType.ProtectorSword,
+    WeaponType.DragonSpear,
+    WeaponType.CutlassOfLight,
+    WeaponType.DemonSword,
+    WeaponType.MasterSword
+  ]
 };
 
-export const WeaponLevels: WeaponType[] = [
-  WeaponType.Rapier,
-  WeaponType.BiggoronsSword,
-  WeaponType.SwordOfDemise,
-  WeaponType.Hammer,
-  WeaponType.ShadowScimitar,
-  WeaponType.ProtectorSword,
-  WeaponType.DragonSpear,
-  WeaponType.CutlassOfLight,
-  WeaponType.DemonSword,
-  WeaponType.MasterSword
-];
-
-export const ItemLevels: ItemType[] = [
-  ItemType.Nothing,
-  ItemType.BlueRing,
-  ItemType.RedRing,
-  ItemType.BlueBracelet,
-  ItemType.RedBracelet,
-  ItemType.MoonPearl,
-  ItemType.FirePearl,
-  ItemType.BombosMedallion,
-  ItemType.EtherMedallion,
-  ItemType.QuakeMedallion
-];
 
 /**
  * Configuration for items.
  */
-export const ITEM_CONFIG = {
-  startPos: { x: 64, y: 432 },
-  frameSize: { w: 16, h: 16 },
-  names: ["Nothing", "Blue Ring", "Red Ring", "Blue Bracelet", "Red Bracelet", "Moon Pearl", "Fire Pearl", "Bombos Medallion", "Ether Medallion", "Quake Medallion"]
+export const ItemConfig: InventoryConfig<ItemType> = {
+  spriteDefs: {
+    [ItemType.Nothing]: { name: "Nothing", x: 0, y: 0, w: 16, h: 16, length: 1 },
+    [ItemType.BlueRing]: { name: "Blue Ring", x: 16, y: 0, w: 16, h: 16, length: 1 },
+    [ItemType.RedRing]: { name: "Red Ring", x: 32, y: 0, w: 16, h: 16, length: 1 },
+    [ItemType.BlueBracelet]: { name: "Blue Bracelet", x: 48, y: 0, w: 16, h: 16, length: 1 },
+    [ItemType.RedBracelet]: { name: "Red Bracelet", x: 64, y: 0, w: 16, h: 16, length: 1 },
+    [ItemType.MoonPearl]: { name: "Moon Pearl", x: 80, y: 0, w: 16, h: 16, length: 1 },
+    [ItemType.FirePearl]: { name: "Fire Pearl", x: 96, y: 0, w: 16, h: 16, length: 1 },
+    [ItemType.BombosMedallion]: { name: "Bombos Medallion", x: 112, y: 0, w: 16, h: 16, length: 1 },
+    [ItemType.EtherMedallion]: { name: "Ether Medallion", x: 128, y: 0, w: 16, h: 16, length: 1 },
+    [ItemType.QuakeMedallion]: { name: "Quake Medallion", x: 144, y: 0, w: 16, h: 16, length: 1 }
+  },
+
+  levels: [
+    ItemType.Nothing,
+    ItemType.BlueRing,
+    ItemType.RedRing,
+    ItemType.BlueBracelet,
+    ItemType.RedBracelet,
+    ItemType.MoonPearl,
+    ItemType.FirePearl,
+    ItemType.BombosMedallion,
+    ItemType.EtherMedallion,
+    ItemType.QuakeMedallion
+  ]
+
 };

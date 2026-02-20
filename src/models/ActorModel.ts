@@ -22,6 +22,12 @@ export enum ActorStateType {
   DEAD
 }
 
+enum MoveReturnValue {
+  Complete,
+  Blocked,
+  Incomplete
+}
+
 export type StateDefinitions = {
   [K in ActorStateType]: ActorState
 }
@@ -86,9 +92,8 @@ export const MoveState: ActorState = {
       actor.snapToGridX();
     }
   },
+
   update(actor: ActorModel) {
-
-
     let dx = 0, dy = 0;
     if (actor.currentDir === Direction.left) dx = -actor.speed;
     if (actor.currentDir === Direction.right) dx = actor.speed;
@@ -276,57 +281,44 @@ export abstract class ActorModel extends EntityModel {
     return this.isAlive;
   }
 
-  public face(direction: Direction): void {
+  public face(direction: Direction): boolean {
+    if (this.currentDir === direction) return true;
+    if (!this.isOnGrid) return false;
+
+    this.snapToGrid();
     this.currentDir = direction;
+    return true;
   }
 
-  public move(direction: Direction, room: RoomModel): void {
+  public move(): MoveReturnValue {
+    const room = gameState.currentRoom;
     const gridSize = room.gridSize;
     const onGrid = this.isOnGrid;
 
+    const impulseX = this.currentDir === Direction.left ? -this.speed : this.currentDir === Direction.right ? this.speed : 0;
+    const impulseY = this.currentDir === Direction.up ? -this.speed : this.currentDir === Direction.down ? this.speed : 0;
+
     if (onGrid) {
-      if (direction === this.currentDir) {
-        // Moving in the same direction, check if passable
-        let nextX = this.x;
-        let nextY = this.y;
+      let nextX = this.x + gridSize * impulseX;
+      let nextY = this.y + gridSize * impulseY;
 
-        if (direction === Direction.up) nextY -= gridSize;
-        else if (direction === Direction.down) nextY += gridSize;
-        else if (direction === Direction.left) nextX -= gridSize;
-        else if (direction === Direction.right) nextX += gridSize;
-
-        if (room.isPassable(nextX, nextY, this.type === EntityType.Player)) {
-          this.performMove(direction);
-        } else {
-          this.snapToGrid();
-        }
-      } else {
-        // Changing direction on grid, snap first
+      if (!room.isPassable(nextX, nextY, this.type === EntityType.Player)) {
         this.snapToGrid();
-        this.face(direction);
-      }
-    } else {
-      // Not on grid
-      if (direction === this.currentDir) {
-        this.performMove(direction);
-      } else if (this.isOppositeDirection(direction)) {
-        this.face(direction);
-        this.performMove(direction);
-      } else {
-        // Perpendicular input off-grid, continue current movement
-        // Ensure we stay in lane
-        if (this.currentDir === Direction.up || this.currentDir === Direction.down) {
-          this.snapToGridX();
-        } else {
-          this.snapToGridY();
-        }
-        this.performMove(this.currentDir);
+        return MoveReturnValue.Blocked;
       }
     }
+
+    this.x += impulseX * this.speed;
+    this.y += impulseY * this.speed;
+
+    if (this.isOnGrid) {
+      return MoveReturnValue.Complete;
+    } else {
+      return MoveReturnValue.Incomplete;
+    }
   }
-  
+
   public abstract ai(): void;
-  abstract attack(direction: Direction, room: RoomModel): void;
 
   public heal(amount: number): boolean {
     if (amount <= 0 || this.hp >= this._maxHp) return false;
@@ -336,20 +328,6 @@ export abstract class ActorModel extends EntityModel {
 
   public getEntityId(): string {
     return `${this.subtype}_${this.currentDir}`;
-  }
-
-  private isOppositeDirection(dir: Direction): boolean {
-    return (dir === Direction.up && this.currentDir === Direction.down) ||
-           (dir === Direction.down && this.currentDir === Direction.up) ||
-           (dir === Direction.left && this.currentDir === Direction.right) ||
-           (dir === Direction.right && this.currentDir === Direction.left);
-  }
-
-  private performMove(dir: Direction): void {
-    if (dir === Direction.up) this.y -= this.speed;
-    else if (dir === Direction.down) this.y += this.speed;
-    else if (dir === Direction.left) this.x -= this.speed;
-    else if (dir === Direction.right) this.x += this.speed;
   }
 
   //#endregion

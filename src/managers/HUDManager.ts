@@ -1,7 +1,7 @@
 import { DungeonManager } from './DungeonManager.js';
 import { PlayerModel } from '../models/PlayerModel.js';
 import { EnemyModel } from '../models/EnemyModel.js';
-import { WeaponConfig, ITEM_CONFIG } from '../config.js';
+import { WeaponConfig, ItemConfig } from '../config.js';
 import { MathZeldaEvent } from '../Event.js';
 
 export class HUDManager {
@@ -52,7 +52,7 @@ export class HUDManager {
 
     // Items
     this.pauseContainer.add(scene.add.bitmapText(16, 72, 'arcade', 'ITEMS (Ones)').setTint(0xd82800));
-    ITEM_CONFIG.names.forEach((name, i) => {
+    ItemConfig.names.forEach((name, i) => {
         const x = 16 + (i % 5) * 24;
         const y = 88 + Math.floor(i / 5) * 24;
         this.pauseContainer.add(scene.add.sprite(x, y, 'master_sheet', `item_${name}`));
@@ -220,7 +220,7 @@ export class HUDManager {
         }
     } else {
         // Item
-        if (idx < ITEM_CONFIG.names.length) player.currentItem = ITEM_CONFIG.names[idx];
+        if (idx < ItemConfig.names.length) player.currentItem = ItemConfig.names[idx];
     }
     this.updateHUD(player);
     this.updateSelectionBoxes(player);
@@ -237,7 +237,7 @@ export class HUDManager {
         this.weaponSelectionBox.setVisible(false);
     }
 
-    const itemIdx = ITEM_CONFIG.names.indexOf(player.currentItem);
+    const itemIdx = ItemConfig.names.indexOf(player.currentItem);
     if (itemIdx !== -1) {
         const x = 16 + (itemIdx % 5) * 24;
         const y = 88 + Math.floor(itemIdx / 5) * 24;

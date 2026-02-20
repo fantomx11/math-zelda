@@ -1,10 +1,9 @@
+import { Direction } from "./models/ActorModel";
 import { EntitySubtype, EntityType } from "./Enums";
 
-/**
- * Maps every Subtype back to its parent EntityType.
- * This is your single source of truth.
- */
-export const SubtypeToType: Record<EntitySubtype, EntityType> = {
+//#region Type Mappings
+
+const SubtypeToType: Record<EntitySubtype, EntityType> = {
   // Players
   [EntitySubtype.Link]: EntityType.Player,
   [EntitySubtype.Zelda]: EntityType.Player,
@@ -56,6 +55,27 @@ export const SubtypeToType: Record<EntitySubtype, EntityType> = {
   [EntitySubtype.Weapon]: EntityType.Pickup,
 } as const;
 
+const OppositeDirections: Record<Direction, Direction> = {
+  [Direction.up]: Direction.down,
+  [Direction.down]: Direction.up,
+  [Direction.left]: Direction.right,
+  [Direction.right]: Direction.left
+};
+
+//#endregion
+
+export function getType(subtype: EntitySubtype): EntityType {
+  return SubtypeToType[subtype];
+}
+
 export function isType(subtype: EntitySubtype, targetType: EntityType): boolean {
   return SubtypeToType[subtype] === targetType;
+}
+
+export function getOppositeDirection(dir: Direction): Direction {
+  return OppositeDirections[dir];
+}
+
+export function isOppositeDirection(currentDirection: Direction, dir: Direction): boolean {
+  return currentDirection === getOppositeDirection(dir);
 }

@@ -1,6 +1,6 @@
 import { ActorModel, Direction, ActorState, IdleState, KnockbackState, AttackState } from './ActorModel.js';
 import { RoomModel } from './RoomModel.js';
-import { ITEM_CONFIG, ItemLevels, WeaponConfig, WeaponLevels } from '../config.js';
+import { ItemConfig, ItemLevels, WeaponConfig, WeaponLevels } from '../config.js';
 import { MathZeldaEvent } from '../Event.js';
 import { EntitySubtype, EntityType, ValidSubtype } from '../EntityType.js';
 import { ActionType } from '../actions/ActorAction.js';
@@ -107,11 +107,5 @@ export class PlayerModel extends ActorModel {
       type: ActionType.ATTACK,
       data: { direction: this.currentDir }
     });
-  }
-
-  getAttackValue(): number {
-    const weaponIdx = WeaponConfig.names.indexOf(this.currentWeapon);
-    const itemIdx = ITEM_CONFIG.names.indexOf(this.currentItem);
-    return (weaponIdx * 10) + itemIdx;
   }
 }

@@ -1,7 +1,7 @@
 import { RoomModel } from '../models/RoomModel.js';
 import { Direction, IdleState } from '../models/ActorModel.js';
 import { PlayerModel } from '../models/PlayerModel.js';
-import { SKIN_CONFIG, WeaponConfig, ITEM_CONFIG } from '../config.js';
+import { SkinConfig, WeaponConfig, ItemConfig } from '../config.js';
 import { GameMode } from '../modes/GameMode.js';
 import { TitleMode } from '../modes/TitleMode.js';
 import { DungeonManager } from '../managers/DungeonManager.js';
@@ -187,9 +187,9 @@ export class DungeonScene extends Phaser.Scene {
    * @param skinName The name of the skin to load.
    */
   loadSkin(subtype: ValidSubtype<EntityType.Player>): void {
-    const skinDefinition = SKIN_CONFIG.skinDefs[subtype];
+    const skinDefinition = SkinConfig.skinDefs[subtype];
 
-    const { x: startX, y: startY } = SKIN_CONFIG.startPos;
+    const { x: startX, y: startY } = SkinConfig.startPos;
     const w = 16;
     const h = 16;
 
@@ -197,7 +197,7 @@ export class DungeonScene extends Phaser.Scene {
     const skinY = skinDefinition.y;
 
     // Create animations for this skin
-    for (const [animKey, config] of Object.entries(SKIN_CONFIG.anims)) {
+    for (const [animKey, config] of Object.entries(SkinConfig.anims)) {
       const frames: Phaser.Types.Animations.AnimationFrame[] = [];
       for (let i = 0; i < config.length; i++) {
         const frameName = `${EntityType.Player}_${subtype}_${animKey}_${i}`;
@@ -246,10 +246,10 @@ export class DungeonScene extends Phaser.Scene {
    * Registers item frames from the sprite sheet.
    */
   loadItems(): void {
-    const { x: startX, y: startY } = ITEM_CONFIG.startPos;
-    const { w, h } = ITEM_CONFIG.frameSize;
+    const { x: startX, y: startY } = ItemConfig.startPos;
+    const { w, h } = ItemConfig.frameSize;
 
-    ITEM_CONFIG.names.forEach((name, i) => {
+    ItemConfig.names.forEach((name, i) => {
       this.textures.get('master_sheet').add(
         `item_${name}`,
         0,
