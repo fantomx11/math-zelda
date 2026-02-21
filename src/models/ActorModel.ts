@@ -35,10 +35,10 @@ export type StateDefinitions = {
 /**
  * Interface for Actor State Pattern.
  */
-export interface ActorState {
-  enter(actor: ActorModel): void;
-  update(actor: ActorModel): void;
-  exit(actor: ActorModel): void;
+export type ActorState = {
+  enter: (actor: ActorModel, payload: any) => void;
+  update: (actor: ActorModel) => void;
+  exit?: (actor: ActorModel) => void;
 }
 
 interface ActorOptionalConfig {
@@ -77,42 +77,81 @@ export const IdleState: ActorState = {
   update(actor: ActorModel) {
     // No movement, just wait for input
   },
-  exit(actor: ActorModel) { }
 };
 
 /**
  * State representing an Actor moving through the grid.
  */
 export const MoveState: ActorState = {
-  enter(actor: ActorModel) {
-    // Perpendicular snap (Lane alignment)
-    if (actor.currentDir === Direction.left || actor.currentDir === Direction.right) {
-      actor.snapToGridY();
+  enter(actor: ActorModel, payload: any) {
+    const { x, y } = payload;
+    actor.stateData = { targetX: x, targetY: y, stepsTaken: 0 };
+
+    const dx = x - actor.x;
+    const dy = y - actor.y;
+
+    if (Math.abs(dx) >= Math.abs(dy)) {
+      actor.face(dx > 0 ? Direction.right : Direction.left);
     } else {
-      actor.snapToGridX();
+      actor.face(dy > 0 ? Direction.down : Direction.up);
     }
   },
 
   update(actor: ActorModel) {
-    let dx = 0, dy = 0;
-    if (actor.currentDir === Direction.left) dx = -actor.speed;
-    if (actor.currentDir === Direction.right) dx = actor.speed;
-    if (actor.currentDir === Direction.up) dy = -actor.speed;
-    if (actor.currentDir === Direction.down) dy = actor.speed;
+    const { targetX, targetY } = actor.stateData;
+    const result = actor.walk();
 
-    const nextX = actor.x + dx;
-    const nextY = actor.y + dy;
+    if (result === MoveReturnValue.Complete) {
+      if (Math.abs(actor.x - targetX) < 1 && Math.abs(actor.y - targetY) < 1) {
+        actor.snapToGrid();
+        actor.finishAction();
+        actor.changeState(IdleState);
+        return;
+      }
 
+      actor.stateData.stepsTaken++;
 
+      const dx = targetX - actor.x;
+      const dy = targetY - actor.y;
+      let changeDir = false;
 
-    if (actor.canPass(nextX, nextY, gameState.currentRoom)) {
-      actor.moveTo(nextX, nextY);
-    } else {
+      if (actor.stateData.stepsTaken >= 2) {
+        changeDir = true;
+      } else if (actor.currentDir === Direction.right && dx <= 0) changeDir = true;
+      else if (actor.currentDir === Direction.left && dx >= 0) changeDir = true;
+      else if (actor.currentDir === Direction.down && dy <= 0) changeDir = true;
+      else if (actor.currentDir === Direction.up && dy >= 0) changeDir = true;
+
+      if (changeDir) {
+        actor.stateData.stepsTaken = 0;
+        if (Math.abs(dx) >= Math.abs(dy)) {
+          if (dx !== 0) actor.face(dx > 0 ? Direction.right : Direction.left);
+          else if (dy !== 0) actor.face(dy > 0 ? Direction.down : Direction.up);
+        } else {
+          if (dy !== 0) actor.face(dy > 0 ? Direction.down : Direction.up);
+          else if (dx !== 0) actor.face(dx > 0 ? Direction.right : Direction.left);
+        }
+      }
+    } else if (result === MoveReturnValue.Blocked) {
       actor.snapToGrid();
+      actor.stateData.stepsTaken = 0;
+      const dx = targetX - actor.x;
+      const dy = targetY - actor.y;
+
+      if (actor.currentDir === Direction.left || actor.currentDir === Direction.right) {
+        if (dy !== 0) actor.face(dy > 0 ? Direction.down : Direction.up);
+        else {
+          actor.finishAction();
+          actor.changeState(IdleState);
+        }
+      } else {
+        if (dx !== 0) actor.face(dx > 0 ? Direction.right : Direction.left);
+        else {
+          actor.finishAction();
+          actor.changeState(IdleState);
+        }
+      }
     }
-  },
-  exit(actor: ActorModel) {
-    actor.snapToGrid();
   }
 };
 
@@ -120,38 +159,58 @@ export const MoveState: ActorState = {
  * State representing an Actor being pushed back by damage.
  */
 export const KnockbackState: ActorState = {
-  enter(actor: ActorModel) {
-    const data = actor.stateData as { srcX: number, srcY: number, dist: number };
-    data.dist = 32;
-    const dx = data.srcX - actor.x;
-    const dy = data.srcY - actor.y;
-    if (Math.abs(dx) > Math.abs(dy)) actor.face(dx > 0 ? Direction.right : Direction.left);
-    else actor.face(dy > 0 ? Direction.down : Direction.up);
+  enter(actor: ActorModel, payload: any) {
+    let dx = payload.srcX - actor.x;
+    let dy = payload.srcY - actor.y;
+
+    if (Math.abs(dx) > Math.abs(dy)) {
+      if(dx > 0) {
+        actor.face(Direction.right);
+        dx = -2;
+        dy = 0;
+      } else {
+        actor.face(Direction.left);
+        dx = 2
+        dy = 0;
+      }
+    } else {
+      if(dy > 0) {
+        actor.face(Direction.down);
+        dx = 0;
+        dy = -2;
+      } else {
+        actor.face(Direction.up);
+        dx = 0;
+        dy = 2;
+      }      
+    }
+    const dist = 32;
+
+    actor.stateData = { dist, dx, dy };
   },
 
   update(actor: ActorModel) {
-    const data = actor.stateData as { dist: number };
-    const speed = 2;
-    let dx = 0, dy = 0;
-    if (actor.currentDir === Direction.left) dx = speed;
-    if (actor.currentDir === Direction.right) dx = -speed;
-    if (actor.currentDir === Direction.up) dy = speed;
-    if (actor.currentDir === Direction.down) dy = -speed;
+    const {dist, dx, dy} = actor.stateData;
+
+    if(dist < Math.abs(dx) || dist < Math.abs(dy)) {
+      actor.snapToGrid();
+      actor.changeState(IdleState);
+      return
+    }
 
     const nextX = actor.x + dx;
     const nextY = actor.y + dy;
 
-    if (actor.canPass(nextX, nextY, gameState.currentRoom)) {
-      actor.moveTo(nextX, nextY);
+    if(!gameState.currentRoom.isPassable(nextX, nextY, actor.type === EntityType.Player)) {
+      actor.snapToGrid();
+    } else {
+      actor.setPosition(nextX, nextY);
     }
 
-    data.dist -= speed;
-    if (data.dist <= 0) {
-      actor.changeState(IdleState);
-    }
+    actor.stateData.dist -= Math.max(Math.abs(dx), Math.abs(dy));
   },
 
-  exit(actor: ActorModel) { actor.stateData = null; },
+  exit(actor: ActorModel) {},
 };
 //#endregion
 
@@ -250,11 +309,13 @@ export abstract class ActorModel extends EntityModel {
   }
 
   public changeState(newState: ActorState): void {
-    if (this.state) {
+    if (this.state && this.state.exit) {
       this.state.exit(this);
     }
     this.state = newState;
-    this.state.enter(this);
+    // Pass data from the current action queue item to the new state's enter method.
+    // This is how MoveState gets its target coordinates.
+    this.state.enter(this, this.nextAction()?.data);
   }
 
   public takeDamage(amount: number, srcX: number, srcY: number): boolean {
@@ -290,13 +351,13 @@ export abstract class ActorModel extends EntityModel {
     return true;
   }
 
-  public move(): MoveReturnValue {
+  public walk(): MoveReturnValue {
     const room = gameState.currentRoom;
     const gridSize = room.gridSize;
     const onGrid = this.isOnGrid;
 
-    const impulseX = this.currentDir === Direction.left ? -this.speed : this.currentDir === Direction.right ? this.speed : 0;
-    const impulseY = this.currentDir === Direction.up ? -this.speed : this.currentDir === Direction.down ? this.speed : 0;
+    const impulseX = this.currentDir === Direction.left ? -1 : this.currentDir === Direction.right ? 1 : 0;
+    const impulseY = this.currentDir === Direction.up ? -1 : this.currentDir === Direction.down ? 1 : 0;
 
     if (onGrid) {
       let nextX = this.x + gridSize * impulseX;
@@ -316,6 +377,11 @@ export abstract class ActorModel extends EntityModel {
     } else {
       return MoveReturnValue.Incomplete;
     }
+  }
+
+  public setPosition(x: number, y: number): void {
+    this.x = x;
+    this.y = y;
   }
 
   public abstract ai(): void;

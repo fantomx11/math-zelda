@@ -96,12 +96,12 @@ export class PlayerModel extends ActorModel {
    * Returns true if the player is currently in an attack state.
    */
   get isAttacking(): boolean {
-    return this.state instanceof AttackState;
+    return this.state === AttackState;
   }
 
   attack(): void {
-    if (this.state instanceof AttackState) return;
-    if (this.state instanceof KnockbackState) return;
+    if (this.state === AttackState) return;
+    if (this.state === KnockbackState) return;
     
     this.queueAction({
       type: ActionType.ATTACK,

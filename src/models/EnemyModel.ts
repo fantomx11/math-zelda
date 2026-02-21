@@ -8,11 +8,73 @@ import { EventBus } from '../EventBus.js';
 import { gameState } from '../GameState.js';
 
 
+// --- AI Behavior Definitions ---
+
+export type AiBehavior = (enemy: EnemyModel) => void;
+
+export const randomMovementAI: AiBehavior = (enemy: EnemyModel) => {
+  const room = gameState.currentRoom;
+  const playableSize = 192;
+  const wallSize = 32;
+  const gridSize = room.gridSize;
+
+  const tx = wallSize + Math.floor(Math.random() * (playableSize / gridSize)) * gridSize;
+  const ty = wallSize + Math.floor(Math.random() * (playableSize / gridSize)) * gridSize;
+  
+  enemy.queueAction({
+    type: ActionType.MOVE,
+    data: { x: tx, y: ty }
+  });
+
+  enemy.queueAction({
+    type: ActionType.WAIT,
+    data: { duration: 60 + Math.floor(Math.random() * 30) }
+  });
+};
+
+export const chasePlayerAI: AiBehavior = (enemy: EnemyModel) => {
+  const player = gameState.player;
+  const room = gameState.currentRoom;
+  const gridSize = room.gridSize;
+  
+  const dx = player.x - enemy.x;
+  const dy = player.y - enemy.y;
+
+  if (Math.abs(dx) < gridSize && Math.abs(dy) < gridSize) {
+    enemy.queueAction({ type: ActionType.WAIT, data: { duration: 30 } });
+    return;
+  }
+
+  const candidates: Direction[] = [];
+  if (Math.abs(dx) >= Math.abs(dy)) {
+    candidates.push(dx > 0 ? Direction.right : Direction.left);
+    candidates.push(dy > 0 ? Direction.down : Direction.up);
+  } else {
+    candidates.push(dy > 0 ? Direction.down : Direction.up);
+    candidates.push(dx > 0 ? Direction.right : Direction.left);
+  }
+  
+  for (const dir of candidates) {
+    const tx = enemy.x + (dir === Direction.left ? -gridSize : dir === Direction.right ? gridSize : 0);
+    const ty = enemy.y + (dir === Direction.up ? -gridSize : dir === Direction.down ? gridSize : 0);
+
+    if (room.isPassable(tx, ty, false)) {
+      enemy.queueAction({ type: ActionType.MOVE, data: { x: tx, y: ty } });
+      return;
+    }
+  }
+
+  enemy.queueAction({ type: ActionType.WAIT, data: { duration: 30 } });
+};
+
+
 /**
  * Configuration for Monster initialization.
  */
 
-type EnemyOptionalConfig = { }
+type EnemyOptionalConfig = {
+  aiBehavior?: AiBehavior;
+}
 
 type EnemyRequiredConfig = {
   color: string
@@ -29,14 +91,16 @@ export class EnemyModel extends ActorModel {
   public static DamageAmount: number = 1;
   public aiTimer: number;
   public color: string;
+  private aiBehavior: AiBehavior;
 
   constructor(config: EnemyConfig) {
     super(config);
 
-    const { color } = config;
+    const { color, aiBehavior = randomMovementAI } = config;
 
     this.aiTimer = 0;
     this.color = color;
+    this.aiBehavior = aiBehavior;
   }
 
 
@@ -45,24 +109,20 @@ export class EnemyModel extends ActorModel {
    * @param room The room model.
    */
   ai(): void {
-    if (this.nextAction()) return; // Already has action
+    // An action is already queued or being processed, do nothing until it's done.
+    if (this.nextAction()) {
+      // If we have a move action but are idle, transition to MoveState.
+      if (this.state === IdleState && this.nextAction()?.type === ActionType.MOVE) {
+        this.changeState(MoveState);
+      }
+      return;
+    }
 
+    // Don't decide a new action if being knocked back.
     if (this.state === KnockbackState) return;
     
-    // Calculate target based on grid size (32)
-    let tx = Math.floor(Math.random() * 192 / 8) * 8;
-    let ty = Math.floor(Math.random() * 192 / 8) * 8;;
-    
-    // Queue the move action
-    this.queueAction({
-      type: ActionType.MOVE,
-      data: { x: tx, y: ty }
-    });
-
-    this.queueAction({
-      type: ActionType.WAIT,
-      data: { duration: 60 + Math.floor(Math.random() * 30) }
-    });
+    // Delegate action decision to the assigned AI behavior.
+    this.aiBehavior(this);
   }
 
   public takeDamage(amount: number, srcX: number, srcY: number): boolean {
