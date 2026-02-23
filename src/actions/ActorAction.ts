@@ -1,11 +1,6 @@
 // src/actions/ActorActions.ts
-import { Direction } from '../models/ActorModel';
-
-export enum ActionType {
-  MOVE,
-  ATTACK,
-  WAIT
-}
+import { ActionType } from '../Enums';
+import { Direction } from '../Enums';
 
 /**
  * Define specific data structures for each logical intent.

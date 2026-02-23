@@ -1,4 +1,4 @@
-import { EntitySubtype, ItemType, WeaponType } from "./Enums";
+import { Direction, EntitySubtype, ItemType, WeaponType } from "./Enums";
 
 /**
  * Configuration for animation frames.
@@ -62,7 +62,7 @@ export const SkinConfig = {
   } as Record<string, AnimFrameConfig>
 };
 
-interface InventoryConfig<T> {
+interface InventoryConfig<T extends string | number | symbol> {
   spriteDefs: Record<T, { name: string; x: number; y: number; w: number; h: number; length: number }>;
   levels: T[];
 }
@@ -129,3 +129,10 @@ export const ItemConfig: InventoryConfig<ItemType> = {
   ]
 
 };
+
+export const DirectionVectors = {
+  [Direction.up]: { x: 0, y: -1 },
+  [Direction.down]: { x: 0, y: 1 },
+  [Direction.left]: { x: -1, y: 0 },
+  [Direction.right]: { x: 1, y: 0 }
+}

@@ -1,7 +1,6 @@
-import { SceneWithItemDrops } from './EntityModel.js';
 import { PickupModel } from './PickupModel.js';
 import { PlayerModel } from './PlayerModel.js';
-import { EntityType } from '../EntityType.js';
+import { EntitySubtype } from '../Enums.js';
 
 /**
  * Represents a heart pickup that restores player health.
@@ -9,8 +8,8 @@ import { EntityType } from '../EntityType.js';
 export class HeartPickupModel extends PickupModel {
   private lifespan: number = 300; // ~5 seconds at 60fps
 
-  constructor(scene: SceneWithItemDrops, config: { x: number, y: number }) {
-    super(scene, { x: config.x, y: config.y, type: 'pickup' as EntityType, subtype: 'heart' });
+  constructor(config: { x: number, y: number }) {
+    super({ x: config.x, y: config.y, subtype: EntitySubtype.Heart });
   }
 
   /**

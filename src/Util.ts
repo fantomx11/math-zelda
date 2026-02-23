@@ -1,9 +1,10 @@
-import { Direction } from "./models/ActorModel";
+import { ActorRequiredStateType, Direction } from './Enums';
 import { EntitySubtype, EntityType } from "./Enums";
+import { ActorState } from './models/ActorModel';
 
 //#region Type Mappings
 
-const SubtypeToType: Record<EntitySubtype, EntityType> = {
+export const SubtypeToType = {
   // Players
   [EntitySubtype.Link]: EntityType.Player,
   [EntitySubtype.Zelda]: EntityType.Player,
@@ -54,6 +55,10 @@ const SubtypeToType: Record<EntitySubtype, EntityType> = {
   [EntitySubtype.Heart]: EntityType.Pickup,
   [EntitySubtype.Weapon]: EntityType.Pickup,
 } as const;
+
+export type ValidSubtype<T extends EntityType> = {
+  [K in keyof typeof SubtypeToType]: (typeof SubtypeToType)[K] extends T ? K : never
+}[keyof typeof SubtypeToType];
 
 const OppositeDirections: Record<Direction, Direction> = {
   [Direction.up]: Direction.down,

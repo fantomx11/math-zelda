@@ -1,9 +1,4 @@
-enum GridCellType {
-  Normal = 'normal',
-  Start = 'start',
-  Boss = 'boss',
-  Item = 'item'
-}
+import { RoomType } from "./Enums";
 
 interface GridCell {
   north: boolean;
@@ -11,7 +6,7 @@ interface GridCell {
   east: boolean;
   west: boolean;
   visited: boolean;
-  type: GridCellType;
+  type: RoomType;
   cleared?: boolean;
   itemCollected?: boolean;
 }
@@ -39,7 +34,7 @@ export class MazeGenerator {
     this.grid = Array.from({ length: size }, () =>
       Array.from({ length: size }, () => ({
         north: false, south: false, east: false, west: false,
-        visited: false, type: GridCellType.Normal
+        visited: false, type: RoomType.Normal
       }))
     );
   }
@@ -56,7 +51,7 @@ export class MazeGenerator {
     while (deadEnds.length < 2) {
       this.reset(size);
       const { x: sx, y: sy } = startPos;
-      this.grid[sy][sx].type = GridCellType.Start;
+      this.grid[sy][sx].type = RoomType.Start;
 
       this.carve(sx, sy);
       deadEnds = this.getDeadEnds(sx, sy);
@@ -67,8 +62,8 @@ export class MazeGenerator {
     const boss = deadEnds.pop()!;
     const item = deadEnds.pop()!;
 
-    this.grid[boss.y][boss.x].type = GridCellType.Boss;
-    this.grid[item.y][item.x].type = GridCellType.Item;
+    this.grid[boss.y][boss.x].type = RoomType.Boss;
+    this.grid[item.y][item.x].type = RoomType.Item;
 
     return this.grid;
   }

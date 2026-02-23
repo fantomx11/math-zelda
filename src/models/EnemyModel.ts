@@ -1,15 +1,14 @@
-import { ActorConfig, ActorModel, ActorSpecificConfig, Direction, ActorState, IdleState, MoveState, KnockbackState } from './ActorModel.js';
+import { ActorConfig, ActorModel, ActorSpecificConfig, ActorState, IdleState, MoveState, KnockbackState } from './ActorModel.js';
+import { Direction } from '../Enums.js';
 import { EntityModel } from './EntityModel.js';
 import { HeartPickupModel } from './HeartPickupModel.js';
 import { PlayerModel } from './PlayerModel.js';
 import { MathZeldaEvent } from '../Event.js';
-import { ActionType } from '../actions/ActorAction.js';
+import { ActionType } from '../Enums.js';
 import { EventBus } from '../EventBus.js';
 import { gameState } from '../GameState.js';
 
-
-// --- AI Behavior Definitions ---
-
+//#region AI Behaviors
 export type AiBehavior = (enemy: EnemyModel) => void;
 
 export const randomMovementAI: AiBehavior = (enemy: EnemyModel) => {
@@ -66,12 +65,9 @@ export const chasePlayerAI: AiBehavior = (enemy: EnemyModel) => {
 
   enemy.queueAction({ type: ActionType.WAIT, data: { duration: 30 } });
 };
+//#endregion
 
-
-/**
- * Configuration for Monster initialization.
- */
-
+//#region Config
 type EnemyOptionalConfig = {
   aiBehavior?: AiBehavior;
 }
@@ -83,48 +79,39 @@ type EnemyRequiredConfig = {
 type EnemySpecificConfig = EnemyOptionalConfig & EnemyRequiredConfig;
 
 export type EnemyConfig = ActorConfig & EnemySpecificConfig;
+//#endregion
 
-/**
- * Base class for enemies with basic AI.
- */
 export class EnemyModel extends ActorModel {
-  public static DamageAmount: number = 1;
-  public aiTimer: number;
-  public color: string;
-  private aiBehavior: AiBehavior;
-
   constructor(config: EnemyConfig) {
-    super(config);
-
+    // Enemies use a standard set of states.
+    super({
+      ...config,
+      states: [IdleState, MoveState, KnockbackState]
+    });
+    
     const { color, aiBehavior = randomMovementAI } = config;
-
+    
     this.aiTimer = 0;
     this.color = color;
     this.aiBehavior = aiBehavior;
   }
+  
+  //#region Identity
+  public color: string;
 
-
-  /**
-   * Executes AI logic for movement.
-   * @param room The room model.
-   */
-  ai(): void {
-    // An action is already queued or being processed, do nothing until it's done.
-    if (this.nextAction()) {
-      // If we have a move action but are idle, transition to MoveState.
-      if (this.state === IdleState && this.nextAction()?.type === ActionType.MOVE) {
-        this.changeState(MoveState);
-      }
-      return;
-    }
-
-    // Don't decide a new action if being knocked back.
-    if (this.state === KnockbackState) return;
-    
-    // Delegate action decision to the assigned AI behavior.
-    this.aiBehavior(this);
+  public get entityId(): string {
+    return `${this.color}_${this.subtype}_${this.currentDir}`;
   }
+  //#endregion
 
+  //#region Logic
+  private aiBehavior: AiBehavior;
+  public aiTimer: number;
+
+
+  //#endregion
+
+  //#region Health
   public takeDamage(amount: number, srcX: number, srcY: number): boolean {
     if(gameState.currentRoom.mathProblem.answer === gameState.player.currentAttackValue) {
       return super.takeDamage(amount, srcX, srcY);
@@ -132,11 +119,9 @@ export class EnemyModel extends ActorModel {
       return false;
     }
   }
+  //#endregion
 
-  /**
-   * Handles monster-specific death logic, like dropping items.
-   * @param scene The scene context.
-   */
+  //#region Interaction
   onDeath(): void {
     EventBus.emit(MathZeldaEvent.MonsterDied, { monster: this });
     if (Math.random() < 0.25) {
@@ -149,5 +134,5 @@ export class EnemyModel extends ActorModel {
       (other as PlayerModel).takeDamage(EnemyModel.DamageAmount, this.x, this.y);
     }
   }
-
+  //#endregion
 }

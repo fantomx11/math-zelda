@@ -1,6 +1,8 @@
-import { SubtypeToType } from "../EntityType";
-import { EntitySubtype, EntityType } from "../Enums";
-import { gameState } from "../GameState";
+import { SubtypeToType } from "../Util.js";
+import { EntitySubtype, EntityType } from "../Enums.js";
+import { gameState } from "../GameState.js";
+
+//#region Config
 
 export interface EntityConfig {
   x: number;
@@ -12,35 +14,12 @@ export type DefaultConfig<T> = {
   [K in keyof T]: undefined extends T[K] ? Required<T>[K] : never;
 };
 
+//#endregion
+
 /**
  * Base class for all entities (Actors, Pickups).
  */
 export abstract class EntityModel {
-  //#region Properties
-
-  private _x: number;
-  private _y: number;
-  private _subtype: EntitySubtype;
-
-  //#endregion
-
-  //#region Abstract Definitions
-
-  /**
-   * Called when another entity touches this entity.
-   * @param other The other entity that touched this entity.
-   */
-  abstract onTouch(other: EntityModel): void;
-  abstract readonly isBlocking: boolean;
-
-  /**
-   * returns true if the entity is still active, false if it should be removed
-   */
-  abstract tick(): boolean;
-
-  //#endregion
-
-  //#region Constructor
   /**
    * @param scene The Phaser scene instance.
    * @param config Configuration for entity initialization.
@@ -52,9 +31,12 @@ export abstract class EntityModel {
     this._y = y;
     this._subtype = subtype;
   }
-  //#endregion
 
-  //#region Accessors
+  //#region Position
+
+  private _x: number;
+  private _y: number;
+
   public get isOnXGrid(): boolean {
     return this.x % gameState.currentRoom.gridSize === 0;
   }
@@ -75,17 +57,6 @@ export abstract class EntityModel {
     return this._y;
   }
 
-  public get type(): EntityType {
-    return SubtypeToType[this._subtype];
-  } 
-
-  public get subtype(): EntitySubtype {
-    return this._subtype;
-  }
-  //#endregion
-
-  //#region Mutators
-
   protected set x(value: number) {
     this._x = value;
   }
@@ -94,19 +65,6 @@ export abstract class EntityModel {
     this._y = value;
   }
 
-  protected set type(value: EntityType) {
-    this._type = value;
-  }
-
-  protected set subtype(value: EntitySubtype) {
-    this._subtype = value;
-  }
-
-  //#endregion
-
-  //#region Methods
-
-  /** Snaps the X coordinate to the grid. */
   public snapToGridX(): void {
     const gridSize = gameState.currentRoom.gridSize;
     this.x = Math.round(this.x / gridSize) * gridSize;
@@ -123,6 +81,51 @@ export abstract class EntityModel {
     this.snapToGridX();
     this.snapToGridY();
   }
+
+  public place(x: number, y: number) {
+    this.x = x;
+    this.y = y;
+  }
+
+  //#endregion
+
+  //#region Identity
+
+  private _subtype: EntitySubtype;
+
+  public get entityId(): string {
+    return `${this.subtype}`;
+  }
+
+
+  public get type(): EntityType {
+    return SubtypeToType[this._subtype];
+  }
+
+  public get subtype(): EntitySubtype {
+    return this._subtype;
+  }
+
+  protected set subtype(value: EntitySubtype) {
+    this._subtype = value;
+  }
+
+
+  //#endregion
+
+  //#region Logic
+  abstract readonly isBlocking: boolean;
+
+  /**
+   * Called when another entity touches this entity.
+   * @param other The other entity that touched this entity.
+   */
+  abstract onTouch(other: EntityModel): void;
+
+  /**
+   * returns true if the entity is still active, false if it should be removed
+   */
+  abstract tick(): boolean;
 
   //#endregion
 }

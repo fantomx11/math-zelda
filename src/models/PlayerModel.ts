@@ -1,43 +1,75 @@
-import { ActorModel, Direction, ActorState, IdleState, KnockbackState, AttackState } from './ActorModel.js';
+import { ActorModel, IdleState, KnockbackState, MoveState, ActorState } from './ActorModel.js';
+import { Direction, EntitySubtype, EntityType, ActorStateType } from '../Enums.js';
 import { RoomModel } from './RoomModel.js';
-import { ItemConfig, ItemLevels, WeaponConfig, WeaponLevels } from '../config.js';
+import { DirectionVectors, ItemConfig, WeaponConfig } from '../config.js';
 import { MathZeldaEvent } from '../Event.js';
-import { EntitySubtype, EntityType, ValidSubtype } from '../EntityType.js';
-import { ActionType } from '../actions/ActorAction.js';
+import { ActionType } from '../Enums.js';
 import { EventBus } from '../EventBus.js';
 import { gameState } from '../GameState.js';
 import { ItemType, WeaponType } from '../Enums.js';
+import { defineStates, ValidSubtype } from '../Util.js';
+
+//#region Config
+
+export const AttackState: ActorState = {
+  type: ActorStateType.ATTACK,
+  enter: (actor: ActorModel, payload: any) => {
+    // Attack logic would go here, this is a placeholder
+  },
+  update: (actor: ActorModel) => {
+    // After attack animation/duration, finish action and return to idle
+    actor.finishAction();
+    actor.changeState(IdleState);
+  },
+};
 
 const defaultConfig = {
   currentHp: 6,
   maxHp: 6,
   speed: 0.5,
-  subtype: EntitySubtype.Link
+  subtype: EntitySubtype.Link,
+  states: [IdleState, MoveState, KnockbackState, AttackState]
 };
 
+//#endregion
+
+//#region Input Definition
+export interface PlayerInput {
+  up: boolean;
+  down: boolean;
+  left: boolean;
+  right: boolean;
+  attack: boolean;
+  item: boolean;
+}
+//#endregion
+
 export class PlayerModel extends ActorModel {
-  public inputDir: Direction | null = null;
+  public input: PlayerInput = { up: false, down: false, left: false, right: false, attack: false, item: false };
+
+  constructor(config: { x: number, y: number, subtype: ValidSubtype<typeof EntityType.Player> }) {
+    super({ ...config, ...defaultConfig });
+
+    this.currentWeapon = WeaponConfig.levels[0];
+    this.currentItem = ItemConfig.levels[0];
+    this.activeTriforcePieces = 0
+  }
+
+  //#region Inventory
   public currentWeapon: WeaponType;
   public currentItem: ItemType;
   public activeTriforcePieces: number;
-
-  constructor(config: { x: number, y: number, subtype: ValidSubtype<EntityType.Player> }) {
-    super({type: EntityType.Player, ...config, ...defaultConfig});
-
-    this.currentWeapon = WeaponLevels[0];
-    this.currentItem = ItemLevels[0];
-  }
 
   public get inventoryLevel(): number {
     return gameState.currentLevel + (gameState.itemFound ? 1 : 0);
   }
 
   public get currentAttackValue(): number {
-    return this.activeTriforcePieces * 100 + WeaponLevels.indexOf(this.currentWeapon) * 10 + ItemLevels.indexOf(this.currentItem);
+    return this.activeTriforcePieces * 100 + WeaponConfig.levels.indexOf(this.currentWeapon) * 10 + ItemConfig.levels.indexOf(this.currentItem);
   }
 
   public get weapons() {
-    return WeaponLevels.slice(0, this.inventoryLevel);
+    return WeaponConfig.levels.slice(0, this.inventoryLevel);
   }
 
   public get triforcePieces(): number {
@@ -45,9 +77,11 @@ export class PlayerModel extends ActorModel {
   }
 
   public get items() {
-    return ItemLevels;
+    return ItemConfig.levels.slice(0, this.inventoryLevel);
   }
+  //#endregion
 
+  //#region Health
   public get hp(): number {
     return super.hp;
   }
@@ -57,30 +91,8 @@ export class PlayerModel extends ActorModel {
 
     super.hp = value;
 
-    if(oldHp !== this.hp) {
+    if (oldHp !== this.hp) {
       EventBus.emit(MathZeldaEvent.PlayerHpChanged);
-    }
-  }
-
-  ai(room: RoomModel): void {
-    if (this.nextAction()) return;
-
-    if (this.inputDir) {
-      // Calculate target based on small step for continuous movement feel, or grid size
-      // Using 16px step for now
-      let tx = this.x;
-      let ty = this.y;
-      const step = 16; 
-      
-      if (this.inputDir === Direction.left) tx -= step;
-      else if (this.inputDir === Direction.right) tx += step;
-      else if (this.inputDir === Direction.up) ty -= step;
-      else if (this.inputDir === Direction.down) ty += step;
-
-      this.queueAction({
-        type: ActionType.MOVE,
-        data: { x: tx, y: ty }
-      });
     }
   }
 
@@ -91,21 +103,49 @@ export class PlayerModel extends ActorModel {
     }
     return false;
   }
+  //#endregion
 
+  //#region Logic
+  ai(): void {
+    if (this.state !== KnockbackState) {
+      if (this.input.attack && this.state !== AttackState) {
+        this.queuePriorityAction({ type: ActionType.ATTACK, data: { direction: this.currentDir } });
+      } else if (this.state === IdleState && (this.input.down || this.input.up || this.input.left || this.input.right)) {
+        if (this.input.down) this.face(Direction.down);
+        else if (this.input.up) this.face(Direction.up);
+        else if (this.input.left) this.face(Direction.left);
+        else if (this.input.right) this.face(Direction.right);
+
+        const step = 16;
+        this.queueAction({
+          type: ActionType.MOVE,
+          data: {
+            x: this.x + DirectionVectors[this.currentDir].x * step,
+            y: this.y + DirectionVectors[this.currentDir].y * step
+          }
+        });
+      }
+    }
+
+    const action = this.nextAction();
+    if (action) {
+      if (this.state === IdleState) {
+        if (action.type === ActionType.ATTACK) {
+          this.changeState(AttackState);
+        } else if (action.type === ActionType.MOVE) {
+          this.changeState(MoveState);
+        }
+      }
+    }
+  }
+  //#endregion
+
+  //#region State
   /**
    * Returns true if the player is currently in an attack state.
    */
   get isAttacking(): boolean {
     return this.state === AttackState;
   }
-
-  attack(): void {
-    if (this.state === AttackState) return;
-    if (this.state === KnockbackState) return;
-    
-    this.queueAction({
-      type: ActionType.ATTACK,
-      data: { direction: this.currentDir }
-    });
-  }
+  //#endregion
 }

@@ -1,45 +1,28 @@
-import { RoomModel } from './RoomModel';
-import { DefaultConfig, EntityConfig, EntityModel } from './EntityModel.js';
+import { EntityConfig, EntityModel } from './EntityModel.js';
 import { MathZeldaEvent } from '../Event';
 import { QueuedAction } from '../actions/ActorAction';
 import { EventBus } from '../EventBus';
 import { gameState } from '../GameState';
-import { EntityType } from '../Enums';
+import { ActionType, ActorRequiredStateType, ActorStateType, Direction, EntityType, MoveReturnValue } from '../Enums';
 
-//#region Types and Interfaces
-export enum Direction {
-  up = "up", down = "down", left = "left", right = "right"
-}
-
-export enum ActorStateType {
-  WAIT,
-  IDLE,
-  MOVE,
-  ATTACK,
-  SPAWN,
-  KNOCKBACK,
-  DYING,
-  DEAD
-}
-
-enum MoveReturnValue {
-  Complete,
-  Blocked,
-  Incomplete
-}
-
-export type StateDefinitions = {
-  [K in ActorStateType]: ActorState
-}
+//#region State Definitions
 
 /**
  * Interface for Actor State Pattern.
  */
 export type ActorState = {
+  type: ActorStateType;
   enter: (actor: ActorModel, payload: any) => void;
   update: (actor: ActorModel) => void;
   exit?: (actor: ActorModel) => void;
+  [key: string]: any; // Allow additional properties for state-specific data
 }
+
+//#endregion
+
+export type AiBehavior = (actor: ActorModel) => void;
+
+//#region Config Definitions
 
 interface ActorOptionalConfig {
   currentHp?: number;
@@ -48,7 +31,8 @@ interface ActorOptionalConfig {
 }
 
 interface ActorRequiredConfig {
-  stateDefinitions: StateDefinitions;
+  aiBehavior: AiBehavior
+  states: readonly ActorState[];
 }
 
 /**
@@ -56,13 +40,15 @@ interface ActorRequiredConfig {
  */
 export type ActorSpecificConfig = ActorOptionalConfig & ActorRequiredConfig;
 
-const defaultConfig: ActorOptionalConfig = {
+const defaultConfig: ActorOptionalConfig & Partial<ActorRequiredConfig> = {
   currentHp: 1,
   maxHp: 1,
-  speed: 0.5
+  speed: 0.5,
+  states: []
 };
 
 export type ActorConfig = EntityConfig & ActorSpecificConfig;
+
 //#endregion
 
 //#region State Implementations
@@ -71,6 +57,7 @@ export type ActorConfig = EntityConfig & ActorSpecificConfig;
  * State representing an Actor standing still.
  */
 export const IdleState: ActorState = {
+  type: ActorStateType.IDLE,
   enter(actor: ActorModel) {
     actor.snapToGrid();
   },
@@ -83,6 +70,15 @@ export const IdleState: ActorState = {
  * State representing an Actor moving through the grid.
  */
 export const MoveState: ActorState = {
+  type: ActorStateType.MOVE,
+  directionFromXY: (dx: number, dy: number): Direction => {
+    if (Math.abs(dx) >= Math.abs(dy)) {
+      return dx > 0 ? Direction.right : Direction.left;
+    } else {
+      return dy > 0 ? Direction.down : Direction.up;
+    }
+  },
+
   enter(actor: ActorModel, payload: any) {
     const { x, y } = payload;
     actor.stateData = { targetX: x, targetY: y, stepsTaken: 0 };
@@ -90,11 +86,7 @@ export const MoveState: ActorState = {
     const dx = x - actor.x;
     const dy = y - actor.y;
 
-    if (Math.abs(dx) >= Math.abs(dy)) {
-      actor.face(dx > 0 ? Direction.right : Direction.left);
-    } else {
-      actor.face(dy > 0 ? Direction.down : Direction.up);
-    }
+    actor.face(this.directionFromXY(dx, dy));
   },
 
   update(actor: ActorModel) {
@@ -117,20 +109,19 @@ export const MoveState: ActorState = {
 
       if (actor.stateData.stepsTaken >= 2) {
         changeDir = true;
-      } else if (actor.currentDir === Direction.right && dx <= 0) changeDir = true;
-      else if (actor.currentDir === Direction.left && dx >= 0) changeDir = true;
-      else if (actor.currentDir === Direction.down && dy <= 0) changeDir = true;
-      else if (actor.currentDir === Direction.up && dy >= 0) changeDir = true;
+      } else if (actor.currentDir === Direction.right && dx <= 0) {
+        changeDir = true;
+      } else if (actor.currentDir === Direction.left && dx >= 0) {
+        changeDir = true;
+      } else if (actor.currentDir === Direction.down && dy <= 0) {
+        changeDir = true;
+      } else if (actor.currentDir === Direction.up && dy >= 0) {
+        changeDir = true;
+      }
 
       if (changeDir) {
         actor.stateData.stepsTaken = 0;
-        if (Math.abs(dx) >= Math.abs(dy)) {
-          if (dx !== 0) actor.face(dx > 0 ? Direction.right : Direction.left);
-          else if (dy !== 0) actor.face(dy > 0 ? Direction.down : Direction.up);
-        } else {
-          if (dy !== 0) actor.face(dy > 0 ? Direction.down : Direction.up);
-          else if (dx !== 0) actor.face(dx > 0 ? Direction.right : Direction.left);
-        }
+        actor.face(this.directionFromXY(dx, dy));
       }
     } else if (result === MoveReturnValue.Blocked) {
       actor.snapToGrid();
@@ -159,12 +150,13 @@ export const MoveState: ActorState = {
  * State representing an Actor being pushed back by damage.
  */
 export const KnockbackState: ActorState = {
+  type: ActorStateType.KNOCKBACK,
   enter(actor: ActorModel, payload: any) {
     let dx = payload.srcX - actor.x;
     let dy = payload.srcY - actor.y;
 
     if (Math.abs(dx) > Math.abs(dy)) {
-      if(dx > 0) {
+      if (dx > 0) {
         actor.face(Direction.right);
         dx = -2;
         dy = 0;
@@ -174,7 +166,7 @@ export const KnockbackState: ActorState = {
         dy = 0;
       }
     } else {
-      if(dy > 0) {
+      if (dy > 0) {
         actor.face(Direction.down);
         dx = 0;
         dy = -2;
@@ -182,7 +174,7 @@ export const KnockbackState: ActorState = {
         actor.face(Direction.up);
         dx = 0;
         dy = 2;
-      }      
+      }
     }
     const dist = 32;
 
@@ -190,9 +182,9 @@ export const KnockbackState: ActorState = {
   },
 
   update(actor: ActorModel) {
-    const {dist, dx, dy} = actor.stateData;
+    const { dist, dx, dy } = actor.stateData;
 
-    if(dist < Math.abs(dx) || dist < Math.abs(dy)) {
+    if (dist < Math.abs(dx) || dist < Math.abs(dy)) {
       actor.snapToGrid();
       actor.changeState(IdleState);
       return
@@ -201,7 +193,7 @@ export const KnockbackState: ActorState = {
     const nextX = actor.x + dx;
     const nextY = actor.y + dy;
 
-    if(!gameState.currentRoom.isPassable(nextX, nextY, actor.type === EntityType.Player)) {
+    if (!gameState.currentRoom.isPassable(nextX, nextY, actor.type === EntityType.Player)) {
       actor.snapToGrid();
     } else {
       actor.setPosition(nextX, nextY);
@@ -210,7 +202,7 @@ export const KnockbackState: ActorState = {
     actor.stateData.dist -= Math.max(Math.abs(dx), Math.abs(dy));
   },
 
-  exit(actor: ActorModel) {},
+  exit(actor: ActorModel) { },
 };
 //#endregion
 
@@ -218,47 +210,93 @@ export const KnockbackState: ActorState = {
  * Base class for all moving entities (Player, Monsters).
  */
 export abstract class ActorModel extends EntityModel {
-  //#region Properties
-
-  private _speed: number;
-  private _currentDir: Direction;
-  private _hp: number;
-  private _maxHp: number;
-  private _invincibleTimer: number;
-  private _state: ActorState;
-  public stateData: any = null;
-  private _actionQueue: QueuedAction[] = [];
-  private _stateDefinitions: StateDefinitions;
-
-  //#endregion
-
-  //#region Constructor
   constructor(config: ActorConfig) {
     super(config);
 
-    const { currentHp, maxHp, speed, stateDefinitions }: Required<ActorConfig> = <Required<ActorConfig>>{ ...config, ...defaultConfig };
+    const { currentHp, maxHp, speed, states }: Required<ActorConfig> = { ...config, ...defaultConfig };
 
-    this._stateDefinitions = stateDefinitions;
+    this._stateDefinitions = new Map(states.map(s => [s.type, s]));
     this._currentDir = Direction.down;
     this._hp = currentHp || maxHp;
     this._maxHp = maxHp;
     this._speed = speed;
     this._invincibleTimer = 0;
-    this._state = this._stateDefinitions[ActorStateType.IDLE];
+    this._state = this._stateDefinitions.get(ActorStateType.IDLE)!;
+  }
+
+  //#region Action Queue
+  private _actionQueue: QueuedAction[] = [];
+
+  public get currentAction(): QueuedAction | undefined {
+    return this._actionQueue[0];
+  }
+
+  public queueAction(action: QueuedAction): void {
+    this._actionQueue.push(action);
+  }
+
+  public queuePriorityAction(action: QueuedAction): void {
+    this._actionQueue.unshift(action);
+  }
+
+  public hasQueuedAction(type: ActionType): boolean {
+    return this._actionQueue.some(a => a.type === type);
+  }
+
+  public clearActionQueue(): void {
+    this._actionQueue = [];
+  }
+
+  public nextAction(): QueuedAction | undefined {
+    return this._actionQueue[1];
+  }
+
+  public finishAction(): void {
+    this._actionQueue.shift();
   }
 
   //#endregion
 
-  //#region Accessors
+  //#region State Machine
+  private _state: ActorState;
+  public stateData: any = null;
+  private _stateDefinitions: Map<ActorStateType, ActorState>;
+
+  public get state(): ActorState { return this._state; }
+  protected set state(value: ActorState) { this._state = value; }
+
+  public changeState(newState: ActorState): void {
+    if (this.state && this.state.exit) {
+      this.state.exit(this);
+    }
+    this.state = newState;
+    // Pass data from the current action queue item to the new state's enter method.
+    // This is how MoveState gets its target coordinates.
+    this.state.enter(this, this.currentAction?.data);
+  }
+
+  public changeStateByType(stateType: ActorStateType): void {
+    const newState = this._stateDefinitions.get(stateType);
+    if (!newState) {
+      console.error(`State with type ${ActorStateType[stateType]} not found for this actor.`);
+      return;
+    }
+    // Note: This doesn't pass a payload. Consider if one is needed.
+    this.changeState(newState);
+  }
+
+  //#endregion
+
+  //#region Position
+
+  private _speed: number;
+  private _currentDir: Direction;
 
   public get speed(): number { return this._speed; }
   public get currentDir(): Direction { return this._currentDir; }
-  public get hp(): number { return this._hp; }
-  public get state(): ActorState { return this._state; }
-  public get isAlive(): boolean { return this._hp > 0; }
-  public get isInvincible(): boolean { return this._invincibleTimer > Date.now(); }
-  public get alpha(): number { return this.isInvincible ? 0.5 : 1; }
-  public get isBlocking(): boolean { return true; }
+  protected set currentDir(value: Direction) { this._currentDir = value; }
+
+  protected set speed(value: number) { this._speed = value; }
 
   public get isOnXGrid(): boolean {
     const gridSize = gameState.currentRoom.gridSize;
@@ -272,76 +310,6 @@ export abstract class ActorModel extends EntityModel {
     return Math.abs(this.y - nearest) <= this.speed;
   }
 
-  //#endregion
-
-  //#region Mutators
-
-  protected set speed(value: number) { this._speed = value; }
-
-  protected set currentDir(value: Direction) { this._currentDir = value; }
-
-  protected set hp(value: number) {
-    value = Math.max(0, Math.min(this._maxHp, value));
-    if (value === this._hp) return;
-    this._hp = value;
-    EventBus.emit(MathZeldaEvent.ActorHpChanged, { hp: this._hp, actor: this });
-  }
-
-  protected set state(value: ActorState) { this._state = value; }
-
-  //#endregion
-
-  //#region Methods
-  public queueAction(action: QueuedAction): void {
-    this._actionQueue.push(action);
-  }
-
-  public clearActionQueue(): void {
-    this._actionQueue = [];
-  }
-
-  public nextAction(): QueuedAction | undefined {
-    return this._actionQueue[0];
-  }
-
-  public finishAction(): void {
-    this._actionQueue.shift();
-  }
-
-  public changeState(newState: ActorState): void {
-    if (this.state && this.state.exit) {
-      this.state.exit(this);
-    }
-    this.state = newState;
-    // Pass data from the current action queue item to the new state's enter method.
-    // This is how MoveState gets its target coordinates.
-    this.state.enter(this, this.nextAction()?.data);
-  }
-
-  public takeDamage(amount: number, srcX: number, srcY: number): boolean {
-    if (this.isInvincible) return false;
-
-    this.hp -= amount;
-    this._invincibleTimer = Date.now() + 1000;
-
-    this.clearActionQueue();
-
-    this.stateData = { srcX, srcY };
-    this.changeState(KnockbackState);
-
-    EventBus.emit(MathZeldaEvent.ActorHurt, { amount: this._hp, actor: this });
-
-    return true;
-  }
-
-  public tick(): boolean {
-    this.ai();
-
-    this.state.update(this);
-
-    return this.isAlive;
-  }
-
   public face(direction: Direction): boolean {
     if (this.currentDir === direction) return true;
     if (!this.isOnGrid) return false;
@@ -350,6 +318,7 @@ export abstract class ActorModel extends EntityModel {
     this.currentDir = direction;
     return true;
   }
+
 
   public walk(): MoveReturnValue {
     const room = gameState.currentRoom;
@@ -384,16 +353,71 @@ export abstract class ActorModel extends EntityModel {
     this.y = y;
   }
 
-  public abstract ai(): void;
+  //#endregion
+
+  //#region Health
+  private _hp: number;
+  private _maxHp: number;
+  private _invincibleTimer: number;
+
+  public get hp(): number { return this._hp; }
+  public get isAlive(): boolean { return this._hp > 0; }
+  public get isInvincible(): boolean { return this._invincibleTimer > Date.now(); }
+
+  protected set hp(value: number) {
+    value = Math.max(0, Math.min(this._maxHp, value));
+    if (value === this._hp) return;
+    this._hp = value;
+    EventBus.emit(MathZeldaEvent.ActorHpChanged, { hp: this._hp, actor: this });
+  }
+
+  public takeDamage(amount: number, srcX: number, srcY: number): boolean {
+    if (this.isInvincible) return false;
+
+    this.hp -= amount;
+    this._invincibleTimer = Date.now() + 1000;
+
+    this.clearActionQueue();
+
+    this.stateData = { srcX, srcY };
+    this.changeState(KnockbackState);
+
+    EventBus.emit(MathZeldaEvent.ActorHurt, { amount: this._hp, actor: this });
+
+    return true;
+  }
 
   public heal(amount: number): boolean {
     if (amount <= 0 || this.hp >= this._maxHp) return false;
     this.hp += amount;
     return true;
   }
+  //#endregion
 
-  public getEntityId(): string {
+  //#region Logical State
+  private aiBehavior: AiBehavior;
+
+  public get alpha(): number { return this.isInvincible ? 0.5 : 1; }
+
+  public get isBlocking(): boolean { return true; }
+
+  public get entityId(): string {
     return `${this.subtype}_${this.currentDir}`;
+  }
+
+  public tick(): boolean {
+    // An action is already queued or being processed, do nothing until it's done.
+    if (this.currentAction) {
+      if (this.state === IdleState && this.nextAction()?.type === ActionType.MOVE) {
+        this.changeState(MoveState);
+      }
+    } else if (this.state !== KnockbackState) {
+      this.aiBehavior(this);
+    }
+
+    this.state.update(this);
+
+    return this.isAlive;
   }
 
   //#endregion
