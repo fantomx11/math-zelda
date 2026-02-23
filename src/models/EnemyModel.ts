@@ -1,4 +1,4 @@
-import { ActorConfig, ActorModel, ActorSpecificConfig, ActorState, IdleState, MoveState, KnockbackState } from './ActorModel.js';
+import { ActorConfig, ActorModel, ActorSpecificConfig, ActorState, IdleState, MoveState, KnockbackState, AiBehavior } from './ActorModel.js';
 import { Direction } from '../Enums.js';
 import { EntityModel } from './EntityModel.js';
 import { HeartPickupModel } from './HeartPickupModel.js';
@@ -9,9 +9,7 @@ import { EventBus } from '../EventBus.js';
 import { gameState } from '../GameState.js';
 
 //#region AI Behaviors
-export type AiBehavior = (enemy: EnemyModel) => void;
-
-export const randomMovementAI: AiBehavior = (enemy: EnemyModel) => {
+export const randomMovementAI: AiBehavior = (enemy: ActorModel) => {
   const room = gameState.currentRoom;
   const playableSize = 192;
   const wallSize = 32;
@@ -31,7 +29,7 @@ export const randomMovementAI: AiBehavior = (enemy: EnemyModel) => {
   });
 };
 
-export const chasePlayerAI: AiBehavior = (enemy: EnemyModel) => {
+export const chasePlayerAI: AiBehavior = (enemy: ActorModel) => {
   const player = gameState.player;
   const room = gameState.currentRoom;
   const gridSize = room.gridSize;
@@ -69,7 +67,7 @@ export const chasePlayerAI: AiBehavior = (enemy: EnemyModel) => {
 
 //#region Config
 type EnemyOptionalConfig = {
-  aiBehavior?: AiBehavior;
+  damageAmount: number;
 }
 
 type EnemyRequiredConfig = {
@@ -81,19 +79,26 @@ type EnemySpecificConfig = EnemyOptionalConfig & EnemyRequiredConfig;
 export type EnemyConfig = ActorConfig & EnemySpecificConfig;
 //#endregion
 
+const defaultConfig: Required<EnemyOptionalConfig> & Partial<EnemyConfig> = {
+  aiBehavior: randomMovementAI,
+  states: [IdleState, MoveState, KnockbackState],
+  color: "red",
+  damageAmount: 1
+}
+
 export class EnemyModel extends ActorModel {
   constructor(config: EnemyConfig) {
     // Enemies use a standard set of states.
     super({
       ...config,
-      states: [IdleState, MoveState, KnockbackState]
+      ...defaultConfig
     });
     
-    const { color, aiBehavior = randomMovementAI } = config;
+    const { color, damageAmount } = {...config, ...defaultConfig};
     
+    this.damageAmount = damageAmount;
     this.aiTimer = 0;
     this.color = color;
-    this.aiBehavior = aiBehavior;
   }
   
   //#region Identity
@@ -121,6 +126,8 @@ export class EnemyModel extends ActorModel {
   //#endregion
 
   //#region Interaction
+  public damageAmount: number;
+
   onDeath(): void {
     EventBus.emit(MathZeldaEvent.MonsterDied, { monster: this });
     if (Math.random() < 0.25) {
@@ -130,7 +137,7 @@ export class EnemyModel extends ActorModel {
 
   onTouch(other: EntityModel): void {
     if (other.type === 'player') {
-      (other as PlayerModel).takeDamage(EnemyModel.DamageAmount, this.x, this.y);
+      (other as PlayerModel).takeDamage(this.damageAmount, this.x, this.y);
     }
   }
   //#endregion

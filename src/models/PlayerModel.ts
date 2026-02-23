@@ -127,7 +127,7 @@ export class PlayerModel extends ActorModel {
       }
     }
 
-    const action = this.nextAction();
+    const action = this.currentAction;
     if (action) {
       if (this.state === IdleState) {
         if (action.type === ActionType.ATTACK) {

@@ -18,6 +18,7 @@ export type ActorState = {
   [key: string]: any; // Allow additional properties for state-specific data
 }
 
+
 //#endregion
 
 export type AiBehavior = (actor: ActorModel) => void;
@@ -204,6 +205,32 @@ export const KnockbackState: ActorState = {
 
   exit(actor: ActorModel) { },
 };
+
+export const DyingState: ActorState = {
+  type: ActorStateType.DYING,
+  enter(actor, payload) {
+    actor.clearActionQueue();
+  },
+  update(actor:ActorModel) {
+
+  },
+  exit(actor) {
+
+  }
+};
+
+export const DeadState: ActorState = {
+  type: ActorStateType.DEAD,
+  enter(actor, payload) {
+    EventBus.emit(MathZeldaEvent.MonsterDied, {monster: actor});
+  },
+  update(actor:ActorModel) {
+
+  },
+  exit(actor) {
+  }
+};
+
 //#endregion
 
 /**
@@ -213,7 +240,7 @@ export abstract class ActorModel extends EntityModel {
   constructor(config: ActorConfig) {
     super(config);
 
-    const { currentHp, maxHp, speed, states }: Required<ActorConfig> = { ...config, ...defaultConfig };
+    const { currentHp, maxHp, speed, states, aiBehavior }: Required<ActorConfig> = { ...config, ...defaultConfig } as Required<ActorConfig>;
 
     this._stateDefinitions = new Map(states.map(s => [s.type, s]));
     this._currentDir = Direction.down;
@@ -222,6 +249,7 @@ export abstract class ActorModel extends EntityModel {
     this._speed = speed;
     this._invincibleTimer = 0;
     this._state = this._stateDefinitions.get(ActorStateType.IDLE)!;
+    this.aiBehavior = aiBehavior;
   }
 
   //#region Action Queue
@@ -361,7 +389,8 @@ export abstract class ActorModel extends EntityModel {
   private _invincibleTimer: number;
 
   public get hp(): number { return this._hp; }
-  public get isAlive(): boolean { return this._hp > 0; }
+  public get isAlive(): boolean { return this.hp > 0; }
+  public get isActive(): boolean { return this.state.type !== ActorStateType.DEAD; }
   public get isInvincible(): boolean { return this._invincibleTimer > Date.now(); }
 
   protected set hp(value: number) {
@@ -375,14 +404,20 @@ export abstract class ActorModel extends EntityModel {
     if (this.isInvincible) return false;
 
     this.hp -= amount;
-    this._invincibleTimer = Date.now() + 1000;
 
-    this.clearActionQueue();
+    if (this.hp <= 0) {
+      this.changeState(this._stateDefinitions.get(ActorStateType.DYING)!);
+    } else {
+      this._invincibleTimer = Date.now() + 1000;
 
-    this.stateData = { srcX, srcY };
-    this.changeState(KnockbackState);
+      this.clearActionQueue();
 
-    EventBus.emit(MathZeldaEvent.ActorHurt, { amount: this._hp, actor: this });
+      this.stateData = { srcX, srcY };
+      this.changeState(KnockbackState);
+
+      EventBus.emit(MathZeldaEvent.ActorHurt, { amount: this._hp, actor: this });
+    }
+
 
     return true;
   }
@@ -391,6 +426,10 @@ export abstract class ActorModel extends EntityModel {
     if (amount <= 0 || this.hp >= this._maxHp) return false;
     this.hp += amount;
     return true;
+  }
+
+  public onDeath(): void {
+    this.changeState(DeadState);
   }
   //#endregion
 
@@ -408,7 +447,7 @@ export abstract class ActorModel extends EntityModel {
   public tick(): boolean {
     // An action is already queued or being processed, do nothing until it's done.
     if (this.currentAction) {
-      if (this.state === IdleState && this.nextAction()?.type === ActionType.MOVE) {
+      if (this.state === IdleState && this.currentAction?.type === ActionType.MOVE) {
         this.changeState(MoveState);
       }
     } else if (this.state !== KnockbackState) {
