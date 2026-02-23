@@ -1,13 +1,12 @@
 import { ActorModel, IdleState, KnockbackState, MoveState, ActorState } from './ActorModel.js';
 import { Direction, EntitySubtype, EntityType, ActorStateType } from '../Enums.js';
-import { RoomModel } from './RoomModel.js';
 import { DirectionVectors, ItemConfig, WeaponConfig } from '../config.js';
 import { MathZeldaEvent } from '../Event.js';
 import { ActionType } from '../Enums.js';
 import { EventBus } from '../EventBus.js';
 import { gameState } from '../GameState.js';
 import { ItemType, WeaponType } from '../Enums.js';
-import { defineStates, ValidSubtype } from '../Util.js';
+import { ValidSubtype } from '../Util.js';
 
 //#region Config
 

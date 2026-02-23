@@ -129,7 +129,7 @@ export class EnemyModel extends ActorModel {
   public damageAmount: number;
 
   onDeath(): void {
-    EventBus.emit(MathZeldaEvent.MonsterDied, { monster: this });
+    EventBus.emit(MathZeldaEvent.ActorDied, { actor: this });
     if (Math.random() < 0.25) {
       gameState.spawnEntity(new HeartPickupModel({ x: this.x, y: this.y }));
     }

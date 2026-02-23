@@ -222,7 +222,7 @@ export const DyingState: ActorState = {
 export const DeadState: ActorState = {
   type: ActorStateType.DEAD,
   enter(actor, payload) {
-    EventBus.emit(MathZeldaEvent.MonsterDied, {monster: actor});
+    EventBus.emit(MathZeldaEvent.ActorDied, {actor: actor});
   },
   update(actor:ActorModel) {
 

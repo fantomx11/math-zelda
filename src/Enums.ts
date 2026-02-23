@@ -116,7 +116,7 @@ export const MathZeldaEvent = {
   ActorHpChanged: "actor_hp_changed",
   ActorAttack: "actor_attack",
   EntityCulled: "entity_culled",
-  MonsterDied: "monster_died",
+  ActorDied: "monster_died",
   PickupCollected: "pickup_collected",
   BossDied: "boss_died"
 } as const;

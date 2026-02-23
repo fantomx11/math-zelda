@@ -22,8 +22,8 @@ export interface PickupCollectedPayload {
   pickup: PickupModel;
 }
 
-export interface MonsterDiedPayload {
-  monster: EnemyModel;
+export interface ActorDiedPayload {
+  actor: ActorModel;
 }
 
 export interface EntityCulledPayload {
@@ -45,7 +45,7 @@ export type EventPayloads = {
   [MathZeldaEvent.ActorHpChanged]: ActorHpChangedPayload;
   [MathZeldaEvent.ActorAttack]: ActorAttackPayload;
   [MathZeldaEvent.EntityCulled]: EntityCulledPayload;
-  [MathZeldaEvent.MonsterDied]: MonsterDiedPayload;
+  [MathZeldaEvent.ActorDied]: ActorDiedPayload;
   [MathZeldaEvent.PickupCollected]: PickupCollectedPayload;
 };
 
