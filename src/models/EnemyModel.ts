@@ -105,7 +105,6 @@ export class EnemyModel extends ActorModel {
   //#endregion
 
   //#region Logic
-  private aiBehavior: AiBehavior;
   public aiTimer: number;
 
 
