@@ -1,4 +1,4 @@
-import { ActorConfig, ActorModel, ActorSpecificConfig, ActorState, IdleState, MoveState, KnockbackState, AiBehavior } from './ActorModel.js';
+import { ActorConfig, ActorModel, IdleState, MoveState, KnockbackState } from './ActorModel.js';
 import { Direction } from '../Enums.js';
 import { EntityModel } from './EntityModel.js';
 import { HeartPickupModel } from './HeartPickupModel.js';
@@ -17,7 +17,7 @@ export const randomMovementAI: AiBehavior = (enemy: ActorModel) => {
 
   const tx = wallSize + Math.floor(Math.random() * (playableSize / gridSize)) * gridSize;
   const ty = wallSize + Math.floor(Math.random() * (playableSize / gridSize)) * gridSize;
-  
+
   enemy.queueAction({
     type: ActionType.MOVE,
     data: { x: tx, y: ty }
@@ -33,7 +33,7 @@ export const chasePlayerAI: AiBehavior = (enemy: ActorModel) => {
   const player = gameState.player;
   const room = gameState.currentRoom;
   const gridSize = room.gridSize;
-  
+
   const dx = player.x - enemy.x;
   const dy = player.y - enemy.y;
 
@@ -50,7 +50,7 @@ export const chasePlayerAI: AiBehavior = (enemy: ActorModel) => {
     candidates.push(dy > 0 ? Direction.down : Direction.up);
     candidates.push(dx > 0 ? Direction.right : Direction.left);
   }
-  
+
   for (const dir of candidates) {
     const tx = enemy.x + (dir === Direction.left ? -gridSize : dir === Direction.right ? gridSize : 0);
     const ty = enemy.y + (dir === Direction.up ? -gridSize : dir === Direction.down ? gridSize : 0);
@@ -65,13 +65,16 @@ export const chasePlayerAI: AiBehavior = (enemy: ActorModel) => {
 };
 //#endregion
 
+export type AiBehavior = (actor: ActorModel) => void;
+
 //#region Config
 type EnemyOptionalConfig = {
   damageAmount: number;
 }
 
 type EnemyRequiredConfig = {
-  color: string
+  color: string;
+  aiBehavior: AiBehavior;
 };
 
 type EnemySpecificConfig = EnemyOptionalConfig & EnemyRequiredConfig;
@@ -93,14 +96,14 @@ export class EnemyModel extends ActorModel {
       ...config,
       ...defaultConfig
     });
-    
-    const { color, damageAmount } = {...config, ...defaultConfig};
-    
+
+    const { color, damageAmount, aiBehavior } = { ...config, ...defaultConfig };
+
     this.damageAmount = damageAmount;
-    this.aiTimer = 0;
     this.color = color;
+    this.aiBehavior = aiBehavior;
   }
-  
+
   //#region Identity
   public color: string;
 
@@ -110,14 +113,16 @@ export class EnemyModel extends ActorModel {
   //#endregion
 
   //#region Logic
-  public aiTimer: number;
+  private aiBehavior: AiBehavior;
 
-
+  ai(): void {
+    this.aiBehavior(this);
+  }
   //#endregion
 
   //#region Health
   public takeDamage(amount: number, srcX: number, srcY: number): boolean {
-    if(gameState.currentRoom.mathProblem.answer === gameState.player.currentAttackValue) {
+    if (gameState.currentRoom.mathProblem.answer === gameState.player.currentAttackValue) {
       return super.takeDamage(amount, srcX, srcY);
     } else {
       return false;

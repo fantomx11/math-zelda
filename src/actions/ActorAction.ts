@@ -29,5 +29,5 @@ export interface ActionDataMap {
  * Use a Discriminated Union to bind Type to Data.
  */
 export type QueuedAction = {
-  [K in ActionType]: { type: K; data: ActionDataMap[K] };
+  [K in ActionType]: { type: K; data: any };
 }[ActionType];

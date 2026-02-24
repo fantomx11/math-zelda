@@ -7,18 +7,22 @@ import { EventBus } from '../EventBus.js';
 import { gameState } from '../GameState.js';
 import { ItemType, WeaponType } from '../Enums.js';
 import { ValidSubtype } from '../Util.js';
+import { EntityModel } from './EntityModel.js';
 
 //#region Config
 
 export const AttackState: ActorState = {
   type: ActorStateType.ATTACK,
-  enter: (actor: ActorModel, payload: any) => {
-    // Attack logic would go here, this is a placeholder
+  enter: (actor: ActorModel) => {
+    const ATTACK_DURATION = 250; // ms
+    actor.currentAction!.data = { endTime: Date.now() + ATTACK_DURATION };
   },
   update: (actor: ActorModel) => {
-    // After attack animation/duration, finish action and return to idle
-    actor.finishAction();
-    actor.changeState(IdleState);
+    // Check if the attack duration has elapsed
+    if (Date.now() >= actor.currentAction!.data.endTime) {
+      actor.finishAction();
+      actor.changeState(IdleState);
+    }
   },
 };
 
@@ -52,6 +56,7 @@ export class PlayerModel extends ActorModel {
     this.currentWeapon = WeaponConfig.levels[0];
     this.currentItem = ItemConfig.levels[0];
     this.activeTriforcePieces = 0
+    this._invincibleTimer = 0;
   }
 
   //#region Inventory
@@ -81,6 +86,9 @@ export class PlayerModel extends ActorModel {
   //#endregion
 
   //#region Health
+  private _invincibleTimer: number;
+  public get isInvincible(): boolean { return this._invincibleTimer > Date.now(); }
+
   public get hp(): number {
     return super.hp;
   }
@@ -96,7 +104,10 @@ export class PlayerModel extends ActorModel {
   }
 
   public takeDamage(amount: number, srcX: number, srcY: number): boolean {
+    if (this.isInvincible) return false;
+
     if (super.takeDamage(amount, srcX, srcY)) {
+      this._invincibleTimer = Date.now() + 1000;
       EventBus.emit(MathZeldaEvent.PlayerDied);
       return true;
     }
@@ -147,4 +158,9 @@ export class PlayerModel extends ActorModel {
     return this.state === AttackState;
   }
   //#endregion
+
+  onTouch(other: EntityModel): void {
+
+  }
+
 }

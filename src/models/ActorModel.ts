@@ -17,11 +17,7 @@ export type ActorState = {
   exit?: (actor: ActorModel) => void;
   [key: string]: any; // Allow additional properties for state-specific data
 }
-
-
 //#endregion
-
-export type AiBehavior = (actor: ActorModel) => void;
 
 //#region Config Definitions
 
@@ -32,7 +28,6 @@ interface ActorOptionalConfig {
 }
 
 interface ActorRequiredConfig {
-  aiBehavior: AiBehavior
   states: readonly ActorState[];
 }
 
@@ -82,7 +77,7 @@ export const MoveState: ActorState = {
 
   enter(actor: ActorModel, payload: any) {
     const { x, y } = payload;
-    actor.stateData = { targetX: x, targetY: y, stepsTaken: 0 };
+    actor.currentAction!.data = { x, y };
 
     const dx = x - actor.x;
     const dy = y - actor.y;
@@ -91,11 +86,11 @@ export const MoveState: ActorState = {
   },
 
   update(actor: ActorModel) {
-    const { targetX, targetY } = actor.stateData;
+    const { targetX: x, targetY: y } = actor.currentAction?.data as any;
     const result = actor.walk();
 
     if (result === MoveReturnValue.Complete) {
-      if (Math.abs(actor.x - targetX) < 1 && Math.abs(actor.y - targetY) < 1) {
+      if (Math.abs(actor.x - x) < 1 && Math.abs(actor.y - y) < 1) {
         actor.snapToGrid();
         actor.finishAction();
         actor.changeState(IdleState);
@@ -104,8 +99,8 @@ export const MoveState: ActorState = {
 
       actor.stateData.stepsTaken++;
 
-      const dx = targetX - actor.x;
-      const dy = targetY - actor.y;
+      const dx = x - actor.x;
+      const dy = y - actor.y;
       let changeDir = false;
 
       if (actor.stateData.stepsTaken >= 2) {
@@ -127,8 +122,8 @@ export const MoveState: ActorState = {
     } else if (result === MoveReturnValue.Blocked) {
       actor.snapToGrid();
       actor.stateData.stepsTaken = 0;
-      const dx = targetX - actor.x;
-      const dy = targetY - actor.y;
+      const dx = x - actor.x;
+      const dy = y - actor.y;
 
       if (actor.currentDir === Direction.left || actor.currentDir === Direction.right) {
         if (dy !== 0) actor.face(dy > 0 ? Direction.down : Direction.up);
@@ -179,11 +174,11 @@ export const KnockbackState: ActorState = {
     }
     const dist = 32;
 
-    actor.stateData = { dist, dx, dy };
+    actor.currentAction!.data = { dist, dx, dy };
   },
 
   update(actor: ActorModel) {
-    const { dist, dx, dy } = actor.stateData;
+    const { dist, dx, dy } = actor.currentAction!.data as any;
 
     if (dist < Math.abs(dx) || dist < Math.abs(dy)) {
       actor.snapToGrid();
@@ -240,16 +235,15 @@ export abstract class ActorModel extends EntityModel {
   constructor(config: ActorConfig) {
     super(config);
 
-    const { currentHp, maxHp, speed, states, aiBehavior }: Required<ActorConfig> = { ...config, ...defaultConfig } as Required<ActorConfig>;
+    const { currentHp, maxHp, speed, states }: Required<ActorConfig> = { ...config, ...defaultConfig } as Required<ActorConfig>;
 
     this._stateDefinitions = new Map(states.map(s => [s.type, s]));
     this._currentDir = Direction.down;
     this._hp = currentHp || maxHp;
     this._maxHp = maxHp;
     this._speed = speed;
-    this._invincibleTimer = 0;
     this._state = this._stateDefinitions.get(ActorStateType.IDLE)!;
-    this.aiBehavior = aiBehavior;
+
   }
 
   //#region Action Queue
@@ -347,7 +341,6 @@ export abstract class ActorModel extends EntityModel {
     return true;
   }
 
-
   public walk(): MoveReturnValue {
     const room = gameState.currentRoom;
     const gridSize = room.gridSize;
@@ -386,12 +379,10 @@ export abstract class ActorModel extends EntityModel {
   //#region Health
   private _hp: number;
   private _maxHp: number;
-  private _invincibleTimer: number;
 
   public get hp(): number { return this._hp; }
   public get isAlive(): boolean { return this.hp > 0; }
   public get isActive(): boolean { return this.state.type !== ActorStateType.DEAD; }
-  public get isInvincible(): boolean { return this._invincibleTimer > Date.now(); }
 
   protected set hp(value: number) {
     value = Math.max(0, Math.min(this._maxHp, value));
@@ -401,15 +392,11 @@ export abstract class ActorModel extends EntityModel {
   }
 
   public takeDamage(amount: number, srcX: number, srcY: number): boolean {
-    if (this.isInvincible) return false;
-
     this.hp -= amount;
 
     if (this.hp <= 0) {
       this.changeState(this._stateDefinitions.get(ActorStateType.DYING)!);
     } else {
-      this._invincibleTimer = Date.now() + 1000;
-
       this.clearActionQueue();
 
       this.stateData = { srcX, srcY };
@@ -417,7 +404,6 @@ export abstract class ActorModel extends EntityModel {
 
       EventBus.emit(MathZeldaEvent.ActorHurt, { amount: this._hp, actor: this });
     }
-
 
     return true;
   }
@@ -434,10 +420,6 @@ export abstract class ActorModel extends EntityModel {
   //#endregion
 
   //#region Logical State
-  private aiBehavior: AiBehavior;
-
-  public get alpha(): number { return this.isInvincible ? 0.5 : 1; }
-
   public get isBlocking(): boolean { return true; }
 
   public get entityId(): string {
@@ -451,7 +433,7 @@ export abstract class ActorModel extends EntityModel {
         this.changeState(MoveState);
       }
     } else if (this.state !== KnockbackState) {
-      this.aiBehavior(this);
+      this.ai();
     }
 
     this.state.update(this);
@@ -459,5 +441,6 @@ export abstract class ActorModel extends EntityModel {
     return this.isAlive;
   }
 
+  abstract ai(): void;
   //#endregion
 }
