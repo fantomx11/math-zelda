@@ -86,7 +86,7 @@ export const MoveState: ActorState = {
   },
 
   update(actor: ActorModel) {
-    const { targetX: x, targetY: y } = actor.currentAction?.data as any;
+    const { x, y } = actor.currentAction?.data as any;
     const result = actor.walk();
 
     if (result === MoveReturnValue.Complete) {
@@ -189,7 +189,7 @@ export const KnockbackState: ActorState = {
     const nextX = actor.x + dx;
     const nextY = actor.y + dy;
 
-    if (!gameState.currentRoom.isPassable(nextX, nextY, actor.type === EntityType.Player)) {
+    if (!gameState.currentRoom.isPassable(nextX, nextY, actor.type === EntityType.Player, [actor])) {
       actor.snapToGrid();
     } else {
       actor.setPosition(nextX, nextY);
@@ -206,7 +206,7 @@ export const DyingState: ActorState = {
   enter(actor, payload) {
     actor.clearActionQueue();
   },
-  update(actor:ActorModel) {
+  update(actor: ActorModel) {
 
   },
   exit(actor) {
@@ -217,15 +217,29 @@ export const DyingState: ActorState = {
 export const DeadState: ActorState = {
   type: ActorStateType.DEAD,
   enter(actor, payload) {
-    EventBus.emit(MathZeldaEvent.ActorDied, {actor: actor});
+    EventBus.emit(MathZeldaEvent.ActorDied, { actor: actor });
   },
-  update(actor:ActorModel) {
+  update(actor: ActorModel) {
 
   },
   exit(actor) {
   }
 };
 
+export const WaitState: ActorState = {
+  type: ActorStateType.WAIT,
+  enter(actor, payload) {
+    actor.currentAction!.data = { duration: payload.duration };
+  },
+  update(actor: ActorModel) {
+    const { duration } = actor.currentAction!.data as any;
+    actor.currentAction!.data = { duration: duration - 1 };
+    if (actor.currentAction!.data.duration <= 0) {
+      actor.finishAction();
+      actor.changeState(IdleState);
+    }
+  }
+};
 //#endregion
 
 /**
@@ -353,7 +367,7 @@ export abstract class ActorModel extends EntityModel {
       let nextX = this.x + gridSize * impulseX;
       let nextY = this.y + gridSize * impulseY;
 
-      if (!room.isPassable(nextX, nextY, this.type === EntityType.Player)) {
+      if (!room.isPassable(nextX, nextY, this.type === EntityType.Player, [this])) {
         this.snapToGrid();
         return MoveReturnValue.Blocked;
       }
@@ -427,13 +441,31 @@ export abstract class ActorModel extends EntityModel {
   }
 
   public tick(): boolean {
+    if(this.state.type === ActorStateType.IDLE) {
+      this.ai();
+    }
+
     // An action is already queued or being processed, do nothing until it's done.
     if (this.currentAction) {
-      if (this.state === IdleState && this.currentAction?.type === ActionType.MOVE) {
-        this.changeState(MoveState);
-      }
-    } else if (this.state !== KnockbackState) {
-      this.ai();
+      switch (this.currentAction.type) {
+        case ActionType.MOVE:
+          if (this.state.type !== ActorStateType.MOVE) {
+            this.changeState(this._stateDefinitions.get(ActorStateType.MOVE)!);
+          }
+          break;
+
+        case ActionType.ATTACK:
+          if (this.state.type !== ActorStateType.ATTACK) {
+            this.changeState(this._stateDefinitions.get(ActorStateType.ATTACK)!);
+          }
+          break;
+
+        case ActionType.WAIT:
+          if (this.state.type !== ActorStateType.WAIT) {
+            this.changeState(this._stateDefinitions.get(ActorStateType.WAIT)!);
+          }
+          break;
+        }
     }
 
     this.state.update(this);

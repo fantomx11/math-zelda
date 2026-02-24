@@ -105,10 +105,10 @@ export class RoomModel {
    * @param w Sprite width (default 16)
    * @param h Sprite height (default 16)
    */
-  public isPassable(x: number, y: number, isPlayer = false, w: number = 16, h: number = 16): boolean {
+  public isPassable(x: number, y: number, isPlayer = false, ignore: EntityModel[] = [], w: number = 16, h: number = 16): boolean {
     const gridSize = this.gridSize;
     for (const entity of this.entities) {
-      if (!entity.isBlocking) continue;
+      if(ignore.includes(entity) || !entity.isBlocking) continue;
       
       const occupiedX: number[] = [];
       if (entity.isOnXGrid) {

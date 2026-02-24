@@ -18,6 +18,7 @@ export const ActorStateType = {
   ATTACK: "ATTACK",
   KNOCKBACK: "KNOCKBACK",
   DYING: "DYING",
+  WAIT: "WAIT"
 } as const;
 export type ActorStateType = typeof ActorStateType[keyof typeof ActorStateType];
 

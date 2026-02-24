@@ -55,7 +55,7 @@ export const chasePlayerAI: AiBehavior = (enemy: ActorModel) => {
     const tx = enemy.x + (dir === Direction.left ? -gridSize : dir === Direction.right ? gridSize : 0);
     const ty = enemy.y + (dir === Direction.up ? -gridSize : dir === Direction.down ? gridSize : 0);
 
-    if (room.isPassable(tx, ty, false)) {
+    if (room.isPassable(tx, ty, false, [enemy])) {
       enemy.queueAction({ type: ActionType.MOVE, data: { x: tx, y: ty } });
       return;
     }
@@ -138,6 +138,7 @@ export class EnemyModel extends ActorModel {
     if (Math.random() < 0.25) {
       gameState.spawnEntity(new HeartPickupModel({ x: this.x, y: this.y }));
     }
+    super.onDeath();
   }
 
   onTouch(other: EntityModel): void {
