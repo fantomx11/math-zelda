@@ -1,71 +1,12 @@
-import { ActorConfig, ActorModel, IdleState, MoveState, KnockbackState } from './ActorModel.js';
-import { Direction } from '../Enums.js';
+import { ActorConfig, ActorModel } from './ActorModel.js';
+import { KnockbackState } from '../state/KnockbackState.js';
+import { MoveState } from '../state/MoveState.js';
+import { IdleState } from '../state/IdleState.js';
 import { EntityModel } from './EntityModel.js';
-import { HeartPickupModel } from './HeartPickupModel.js';
 import { PlayerModel } from './PlayerModel.js';
-import { MathZeldaEvent } from '../Event.js';
-import { ActionType } from '../Enums.js';
-import { EventBus } from '../EventBus.js';
 import { gameState } from '../GameState.js';
-
-//#region AI Behaviors
-export const randomMovementAI: AiBehavior = (enemy: ActorModel) => {
-  const room = gameState.currentRoom;
-  const playableSize = 192;
-  const wallSize = 32;
-  const gridSize = room.gridSize;
-
-  const tx = wallSize + Math.floor(Math.random() * (playableSize / gridSize)) * gridSize;
-  const ty = wallSize + Math.floor(Math.random() * (playableSize / gridSize)) * gridSize;
-
-  enemy.queueAction({
-    type: ActionType.MOVE,
-    data: { x: tx, y: ty }
-  });
-
-  enemy.queueAction({
-    type: ActionType.WAIT,
-    data: { duration: 60 + Math.floor(Math.random() * 30) }
-  });
-};
-
-export const chasePlayerAI: AiBehavior = (enemy: ActorModel) => {
-  const player = gameState.player;
-  const room = gameState.currentRoom;
-  const gridSize = room.gridSize;
-
-  const dx = player.x - enemy.x;
-  const dy = player.y - enemy.y;
-
-  if (Math.abs(dx) < gridSize && Math.abs(dy) < gridSize) {
-    enemy.queueAction({ type: ActionType.WAIT, data: { duration: 30 } });
-    return;
-  }
-
-  const candidates: Direction[] = [];
-  if (Math.abs(dx) >= Math.abs(dy)) {
-    candidates.push(dx > 0 ? Direction.right : Direction.left);
-    candidates.push(dy > 0 ? Direction.down : Direction.up);
-  } else {
-    candidates.push(dy > 0 ? Direction.down : Direction.up);
-    candidates.push(dx > 0 ? Direction.right : Direction.left);
-  }
-
-  for (const dir of candidates) {
-    const tx = enemy.x + (dir === Direction.left ? -gridSize : dir === Direction.right ? gridSize : 0);
-    const ty = enemy.y + (dir === Direction.up ? -gridSize : dir === Direction.down ? gridSize : 0);
-
-    if (room.isPassable(tx, ty, false, [enemy])) {
-      enemy.queueAction({ type: ActionType.MOVE, data: { x: tx, y: ty } });
-      return;
-    }
-  }
-
-  enemy.queueAction({ type: ActionType.WAIT, data: { duration: 30 } });
-};
-//#endregion
-
-export type AiBehavior = (actor: ActorModel) => void;
+import { randomMovementAI } from '../ai/randomMovementAI.js';
+import { AiBehavior } from '../ai/AiBehavior.js';
 
 //#region Config
 type EnemyOptionalConfig = {
@@ -132,14 +73,6 @@ export class EnemyModel extends ActorModel {
 
   //#region Interaction
   public damageAmount: number;
-
-  onDeath(): void {
-    EventBus.emit(MathZeldaEvent.ActorDied, { actor: this });
-    if (Math.random() < 0.25) {
-      gameState.spawnEntity(new HeartPickupModel({ x: this.x, y: this.y }));
-    }
-    super.onDeath();
-  }
 
   onTouch(other: EntityModel): void {
     if (other.type === 'player') {

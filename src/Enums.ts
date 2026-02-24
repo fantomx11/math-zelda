@@ -1,19 +1,6 @@
-export const ActionType = {
-  MOVE: "MOVE",
-  ATTACK: "ATTACK",
-  WAIT: "WAIT"
-} as const;
-export type ActionType = typeof ActionType[keyof typeof ActionType];
-
-export const ActorRequiredStateType = {
-  SPAWN: "SPAWN",
-  IDLE: "IDLE",
-  DEAD: "DEAD"
-} as const;
-export type ActorRequiredStateType = typeof ActorRequiredStateType[keyof typeof ActorRequiredStateType]
-
 export const ActorStateType = {
-  ...ActorRequiredStateType,
+  IDLE: "IDLE",
+  DEAD: "DEAD",
   MOVE: "MOVE",
   ATTACK: "ATTACK",
   KNOCKBACK: "KNOCKBACK",

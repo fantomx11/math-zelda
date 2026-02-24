@@ -1,6 +1,6 @@
 import { ActorRequiredStateType, Direction } from './Enums';
 import { EntitySubtype, EntityType } from "./Enums";
-import { ActorState } from './models/ActorModel';
+import { ActorState } from './state/ActorState';
 
 //#region Type Mappings
 

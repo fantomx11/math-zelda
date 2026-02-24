@@ -1,5 +1,5 @@
 import { RoomModel } from '../models/RoomModel.js';
-import { IdleState } from '../models/ActorModel.js';
+import { IdleState } from '../models/IdleState.js';
 import { Direction } from '../Enums.js';
 import { PlayerModel } from '../models/PlayerModel.js';
 import { SkinConfig, WeaponConfig, ItemConfig } from '../config.js';

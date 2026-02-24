@@ -1,40 +1,24 @@
-import { ActorModel, IdleState, KnockbackState, MoveState, ActorState } from './ActorModel.js';
+import { ActorModel } from './ActorModel.js';
+import { KnockbackState } from '../state/KnockbackState.js';
+import { MoveState } from '../state/MoveState.js';
+import { IdleState } from '../state/IdleState.js';
 import { Direction, EntitySubtype, EntityType, ActorStateType } from '../Enums.js';
 import { DirectionVectors, ItemConfig, WeaponConfig } from '../config.js';
 import { MathZeldaEvent } from '../Event.js';
-import { ActionType } from '../Enums.js';
 import { EventBus } from '../EventBus.js';
 import { gameState } from '../GameState.js';
 import { ItemType, WeaponType } from '../Enums.js';
 import { ValidSubtype } from '../Util.js';
 import { EntityModel } from './EntityModel.js';
-
-//#region Config
-
-export const AttackState: ActorState = {
-  type: ActorStateType.ATTACK,
-  enter: (actor: ActorModel) => {
-    const ATTACK_DURATION = 250; // ms
-    actor.currentAction!.data = { endTime: Date.now() + ATTACK_DURATION };
-  },
-  update: (actor: ActorModel) => {
-    // Check if the attack duration has elapsed
-    if (Date.now() >= actor.currentAction!.data.endTime) {
-      actor.finishAction();
-      actor.changeState(IdleState);
-    }
-  },
-};
+import { PlayerAttackState } from '../state/PlayerAttackState.js';
 
 const defaultConfig = {
   currentHp: 6,
   maxHp: 6,
   speed: 0.5,
   subtype: EntitySubtype.Link,
-  states: [IdleState, MoveState, KnockbackState, AttackState]
+  states: [IdleState, MoveState, KnockbackState, PlayerAttackState]
 };
-
-//#endregion
 
 //#region Input Definition
 export interface PlayerInput {
@@ -117,34 +101,22 @@ export class PlayerModel extends ActorModel {
 
   //#region Logic
   ai(): void {
-    if (this.state !== KnockbackState) {
-      if (this.input.attack && this.state !== AttackState) {
-        this.queuePriorityAction({ type: ActionType.ATTACK, data: { direction: this.currentDir } });
-      } else if (this.state === IdleState && (this.input.down || this.input.up || this.input.left || this.input.right)) {
+    if (this.currentState.state.type !== ActorStateType.KNOCKBACK) {
+      if (this.input.attack && this.currentState.state.type !== ActorStateType.ATTACK) {
+        this.queuePriorityState(ActorStateType.ATTACK, { direction: this.currentDir });
+      } else if (this.currentState.state.type === ActorStateType.IDLE && (this.input.down || this.input.up || this.input.left || this.input.right)) {
         if (this.input.down) this.face(Direction.down);
         else if (this.input.up) this.face(Direction.up);
         else if (this.input.left) this.face(Direction.left);
         else if (this.input.right) this.face(Direction.right);
 
         const step = 16;
-        this.queueAction({
-          type: ActionType.MOVE,
-          data: {
+        this.queueState(ActorStateType.MOVE,
+          {
             x: this.x + DirectionVectors[this.currentDir].x * step,
             y: this.y + DirectionVectors[this.currentDir].y * step
           }
-        });
-      }
-    }
-
-    const action = this.currentAction;
-    if (action) {
-      if (this.state === IdleState) {
-        if (action.type === ActionType.ATTACK) {
-          this.changeState(AttackState);
-        } else if (action.type === ActionType.MOVE) {
-          this.changeState(MoveState);
-        }
+        );
       }
     }
   }
@@ -155,7 +127,7 @@ export class PlayerModel extends ActorModel {
    * Returns true if the player is currently in an attack state.
    */
   get isAttacking(): boolean {
-    return this.state === AttackState;
+    return this.currentState.state.type === ActorStateType.ATTACK;
   }
   //#endregion
 
