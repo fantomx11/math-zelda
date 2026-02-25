@@ -4,8 +4,8 @@ import { PickupModel } from './models/PickupModel';
 import { EntityModel } from './models/EntityModel';
 import { EventBus } from './EventBus';
 import { MathZeldaEvent } from './Event';
-import { HeartPickupModel } from './models/HeartPickupModel';
 import { PlayerModel } from './models/PlayerModel';
+import { Direction } from './Enums';
 
 class GameState {
   private _currentRoomX: number;
@@ -87,6 +87,9 @@ class GameState {
     this._entities.push(entity);
   }
 
+  public findItem() {
+    this._itemFound = true;
+  }
 }
 
 export const gameState = new GameState();

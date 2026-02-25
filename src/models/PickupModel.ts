@@ -1,12 +1,16 @@
 import { PlayerModel } from './PlayerModel.js';
 import { EntityConfig, EntityModel } from './EntityModel.js';
+import { ValidSubtype } from '../Util.js';
+import { EntitySubtype, EntityType } from '../Enums.js';
 
- /** Represents an item on the ground that can be picked up.
- */
+export type PickupConfig = {
+  subtype: ValidSubtype<typeof EntityType.Pickup>;
+} & EntityConfig;
+
 export abstract class PickupModel extends EntityModel {
   pickedUp: boolean = false;
 
-  constructor(config: EntityConfig) {
+  constructor(config: PickupConfig) {
     super(config);
   }
 
@@ -18,7 +22,7 @@ export abstract class PickupModel extends EntityModel {
    * Pickups don't have AI.
    */
   tick(): boolean {
-    return this.pickedUp;
+    return !this.pickedUp;
   }
 
   /**
@@ -30,7 +34,7 @@ export abstract class PickupModel extends EntityModel {
   abstract onPickup(player: PlayerModel): boolean;
   
   onTouch(other: EntityModel): void {
-    if (other.type === 'player' && this.onPickup(other as PlayerModel)) {
+    if (other.type === EntityType.Player && this.onPickup(other as PlayerModel)) {
       this.pickedUp = true;
     };
   }

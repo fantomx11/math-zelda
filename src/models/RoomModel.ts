@@ -97,7 +97,6 @@ export class RoomModel {
     }
   }
 
-
   /**
    * Checks if a sprite's center (x, y) is within bounds.
    * @param x Center X coordinate

@@ -1,4 +1,4 @@
-import { ActorRequiredStateType, Direction } from './Enums';
+import { Direction } from './Enums';
 import { EntitySubtype, EntityType } from "./Enums";
 import { ActorState } from './state/ActorState';
 
