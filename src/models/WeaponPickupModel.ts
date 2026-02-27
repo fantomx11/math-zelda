@@ -7,8 +7,6 @@ type WeaponConfig = {
   subtype: never;
 } & PickupConfig;
 
-
-
 export class WeaponPickupModel extends PickupModel {
   constructor(config: WeaponConfig) {
     super({ ...config, subtype: EntitySubtype.Weapon });
