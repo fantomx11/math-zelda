@@ -1,7 +1,7 @@
 import { DungeonScene } from '../scenes/DungeonScene.js';
 
 export class GameMode {
-  constructor(protected scene: DungeonScene) {}
+  constructor() {}
   enter(): void {}
   exit(): void {}
   update(): void {}

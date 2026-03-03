@@ -48,6 +48,16 @@ export class PlayerModel extends ActorModel {
   public currentItem: ItemType;
   public activeTriforcePieces: number;
 
+  public selectWeapon(weapon: WeaponType): void {
+    if(this.weapons.includes(weapon))
+      this.currentWeapon = weapon;
+  }
+
+  public selectItem(item: ItemType): void {
+    if(this.items.includes(item))
+      this.currentItem = item;
+  }
+
   public get inventoryLevel(): number {
     return gameState.currentLevel + (gameState.itemFound ? 1 : 0);
   }

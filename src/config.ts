@@ -1,4 +1,5 @@
 import { Direction, EntitySubtype, ItemType, WeaponType } from "./Enums";
+import { gameState } from "./GameState";
 
 /**
  * Configuration for animation frames.
@@ -135,4 +136,44 @@ export const DirectionVectors = {
   [Direction.down]: { x: 0, y: 1 },
   [Direction.left]: { x: -1, y: 0 },
   [Direction.right]: { x: 1, y: 0 }
+}
+
+export const InventoryScreenItems: (WeaponType | ItemType)[][] = [
+  [ WeaponType.Rapier,         WeaponType.BiggoronsSword, WeaponType.SwordOfDemise,  WeaponType.Hammer,       WeaponType.ShadowScimitar ],
+  [ WeaponType.ProtectorSword, WeaponType.DragonSpear,    WeaponType.CutlassOfLight, WeaponType.DemonSword,   WeaponType.MasterSword    ],
+  [ ItemType.Nothing,          ItemType.BlueRing,         ItemType.RedRing,          ItemType.BlueBracelet,   ItemType.RedBracelet      ],
+  [ ItemType.MoonPearl,        ItemType.FirePearl,        ItemType.BombosMedallion,  ItemType.EtherMedallion, ItemType.QuakeMedallion   ]
+] as const;
+
+export function getInventoryPositionFromItem(item: ItemType | WeaponType): {x: number, y: number} {
+  const y = InventoryScreenItems.findIndex(row => row.includes(item));
+  const x = InventoryScreenItems[y].indexOf(item);
+
+  return {
+    x,
+    y
+  };
+}
+
+export function getInventoryItems(): (WeaponType | ItemType)[][] {
+  const returnValue = InventoryScreenItems.map(row => row.map(item => {
+    if(isWeapon(item) && gameState.player.weapons.includes(item))
+      return item;
+    else if(isItem(item) && gameState.player.items.includes(item))
+      return item;
+    else
+      return null;
+
+  }));
+
+  return InventoryScreenItems;
+}
+
+
+export function isWeapon(item: any): item is WeaponType {
+  return Object.values(WeaponType).includes(item);
+}
+
+export function isItem(item: any): item is ItemType {
+  return Object.values(ItemType).includes(item);
 }
