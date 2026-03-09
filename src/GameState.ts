@@ -6,31 +6,35 @@ import { EventBus } from './EventBus';
 import { MathZeldaEvent } from './Event';
 import { PlayerModel } from './models/PlayerModel';
 import { Direction } from './Enums';
+import { DirectionVectors } from './config';
+import { LevelModel } from './models/LevelModel';
 
 class GameState {
   private _currentRoomX: number;
   private _currentRoomY: number;
-  private _rooms: RoomModel[][] = [];
   private _entities: EntityModel[] = [];
-  private _currentLevel: number = 1;
+  private _currentLevel!: LevelModel;
   private _itemFound: boolean = false;
 
-  public player: PlayerModel;
+  public player!: PlayerModel;
 
-  constructor() {
+  constructor(level = 1) {
+    this.startLevel(level);
+
     this._currentRoomX = 0;
     this._currentRoomY = 0;
   }
   
   public get currentRoom(): RoomModel {
-    if(this._currentRoomX > 0 && this._currentRoomX < this._rooms.length && this._currentRoomY > 0 && this._currentRoomY < this._rooms[this._currentRoomX].length) {
-      return this._rooms[this._currentRoomX][this._currentRoomY];
+    if(this._currentRoomX > 0 && this._currentRoomX < this._currentLevel.rooms.length &&
+       this._currentRoomY > 0 && this._currentRoomY < this._currentLevel.rooms[this._currentRoomX].length) {
+      return this._currentLevel.rooms[this._currentRoomX][this._currentRoomY];
     } else {
       throw new Error(`Current room coordinates (${this._currentRoomX}, ${this._currentRoomY}) are out of bounds.`);
     }
   }
 
-  public get currentLevel(): number {
+  public get currentLevel(): LevelModel {
     return this._currentLevel;
   }
 
@@ -43,8 +47,7 @@ class GameState {
   }
 
   startLevel(level = 1) {
-    this._currentLevel = level;
-    this._rooms = RoomModel.generateLevel(level);
+    this._currentLevel = new LevelModel(level);
     this._currentRoomX = 0;
     this._currentRoomY = 0;
     this._itemFound = false;
@@ -54,17 +57,18 @@ class GameState {
   }
 
   public moveToRoom(direction: Direction) {
-    const newRoom = this.currentRoom.getAdjacentRoom(direction);
-    if (newRoom) {
-      this._currentRoom = newRoom;
-      EventBus.emit(MathZeldaEvent.RoomChanged, { room: newRoom });
-    }
+    const dX = DirectionVectors[direction].x;
+    const dY = DirectionVectors[direction].y;
+
+    this._currentRoomX += dX;
+    this._currentRoomY += dY;
+
+    EventBus.emit(MathZeldaEvent.RoomChanged);
   }
 
   public initialize() {
     this._entities = [];
   }
-
 
   public update() {
     const { culledEntities, liveEntities } = this._entities.reduce((acc, entity) => {

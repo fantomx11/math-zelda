@@ -1,32 +1,21 @@
 import { MathZeldaEvent } from "./Enums";
 import { ActorModel } from "./models/ActorModel";
-import { EnemyModel } from "./models/EnemyModel";
 import { EntityModel } from "./models/EntityModel";
 import { PickupModel } from "./models/PickupModel";
 
-export interface ActorHpChangedPayload {
-  hp: number;
-  actor: ActorModel;
-}
-
-export interface ActorHurtPayload {
+export interface AmountPayload {
   amount: number;
-  actor: ActorModel;
 }
 
-export interface ActorAttackPayload {
-  actor: ActorModel;
-}
-
-export interface PickupCollectedPayload {
+export interface PickupPayload {
   pickup: PickupModel;
 }
 
-export interface ActorDiedPayload {
+export interface ActorPayload {
   actor: ActorModel;
 }
 
-export interface EntityCulledPayload {
+interface EntityPayload {
   entity: EntityModel;
 } 
 
@@ -41,12 +30,16 @@ export type EventPayloads = {
 
   [MathZeldaEvent.BossDied]: void;
 
-  [MathZeldaEvent.ActorHurt]: ActorHurtPayload;
-  [MathZeldaEvent.ActorHpChanged]: ActorHpChangedPayload;
-  [MathZeldaEvent.ActorAttack]: ActorAttackPayload;
-  [MathZeldaEvent.EntityCulled]: EntityCulledPayload;
-  [MathZeldaEvent.ActorDied]: ActorDiedPayload;
-  [MathZeldaEvent.PickupCollected]: PickupCollectedPayload;
+  [MathZeldaEvent.EntitySpawned]: EntityPayload;
+  [MathZeldaEvent.EntityCulled]: EntityPayload;
+
+  [MathZeldaEvent.ActorHurt]: ActorPayload;
+  [MathZeldaEvent.ActorHpChanged]: ActorPayload;
+  [MathZeldaEvent.ActorMoved]: ActorPayload;
+  [MathZeldaEvent.ActorAttack]: ActorPayload;
+  [MathZeldaEvent.ActorDied]: ActorPayload;
+
+  [MathZeldaEvent.PickupCollected]: PickupPayload;
 };
 
 export { MathZeldaEvent };

@@ -210,7 +210,7 @@ export abstract class ActorModel extends EntityModel {
     value = Math.max(0, Math.min(this._maxHp, value));
     if (value === this._hp) return;
     this._hp = value;
-    EventBus.emit(MathZeldaEvent.ActorHpChanged, { hp: this._hp, actor: this });
+    EventBus.emit(MathZeldaEvent.ActorHpChanged, { actor: this });
   }
 
   public takeDamage(amount: number, srcX: number, srcY: number): boolean {
@@ -224,7 +224,7 @@ export abstract class ActorModel extends EntityModel {
 
       this.queueState(this.getStateFromType(ActorStateType.KNOCKBACK), { srcX, srcY });
 
-      EventBus.emit(MathZeldaEvent.ActorHurt, { amount: this._hp, actor: this });
+      EventBus.emit(MathZeldaEvent.ActorHurt, { actor: this });
     }
 
     return true;

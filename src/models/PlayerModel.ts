@@ -59,7 +59,7 @@ export class PlayerModel extends ActorModel {
   }
 
   public get inventoryLevel(): number {
-    return gameState.currentLevel + (gameState.itemFound ? 1 : 0);
+    return gameState.currentLevel.levelNumber + (gameState.itemFound ? 1 : 0);
   }
 
   public get currentAttackValue(): number {

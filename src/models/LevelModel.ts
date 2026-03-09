@@ -105,11 +105,15 @@ function getDeadEnds(grid: GridCell[][], startX: number, startY: number): Point[
 
 export class LevelModel {
   public levelNumber: number;
-  public rooms: RoomModel[][];
+  public rooms!: RoomModel[][];
 
-  constructor(levelNumber: number, rooms: RoomModel[][]) {
+  constructor(levelNumber: number, rooms?: RoomModel[][]) {
+    if (!rooms) {
+      this.generateLevel(levelNumber);
+    } else {
+      this.rooms = rooms;
+    }
     this.levelNumber = levelNumber;
-    this.rooms = rooms;
   }
 
   public generateLevel(levelNumber: number): void {

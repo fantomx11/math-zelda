@@ -99,14 +99,19 @@ export const MathZeldaEvent = {
 
   PlayerHpChanged: "player_hp_changed",
   PlayerDied: "player_died",
+  
+  BossDied: "boss_died",
+
+  EntitySpawned: "entity_spawned",
+  EntityCulled: "entity_culled",
 
   ActorHurt: "actor_hurt",
   ActorHpChanged: "actor_hp_changed",
   ActorAttack: "actor_attack",
-  EntityCulled: "entity_culled",
-  ActorDied: "monster_died",
+  ActorMoved: "actor_moved",
+  ActorDied: "actor_died",
+
   PickupCollected: "pickup_collected",
-  BossDied: "boss_died"
 } as const;
 export type MathZeldaEvent = typeof MathZeldaEvent[keyof typeof MathZeldaEvent];
 
